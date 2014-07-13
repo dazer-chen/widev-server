@@ -1,6 +1,8 @@
 widev-server-v2
 ===============
 
+[ ![Codeship Status for widev/widev-server-v2](https://www.codeship.io/projects/102f75b0-ecb6-0131-a298-624d1c6d48fa/status)](https://www.codeship.io/projects/26621)
+
 New version of the Widev Server Developped with Play Framework (Scala)
 
 ## Pre-requires
