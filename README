@@ -1,4 +1,6 @@
 This is your new Play application
 =================================
 
+[ ![Codeship Status for widev/widev-server-v2](https://www.codeship.io/projects/102f75b0-ecb6-0131-a298-624d1c6d48fa/status)](https://www.codeship.io/projects/26621)
+
 This file will be packaged with your application, when using `activator dist`.
