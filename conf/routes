@@ -10,7 +10,7 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
 # Oauth Github
 
-GET     /github/callback            controllers.Authentification.githubCallback
+GET     /github/callback            controllers.Authentification.githubCallback(code: String)
 GET     /github/signin              controllers.Authentification.githubSigning
 
 

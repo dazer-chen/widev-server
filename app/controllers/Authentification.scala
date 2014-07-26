@@ -15,9 +15,9 @@ object Authentification extends Controller{
   def githubSigning = Action { Redirect(GithubOauth2.signIn()) }
 
 
-  def githubCallback = Action.async { implicit request =>
-    GithubOauth2.authenticate(request.body.toString).map {
-      response => Ok("ok")
+  def githubCallback(code: String) = Action.async { implicit request =>
+    GithubOauth2.authenticate(code).map {
+      response => Ok("access_token : %s".format(response))
     }
   }
 

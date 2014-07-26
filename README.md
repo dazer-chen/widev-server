@@ -25,3 +25,8 @@ New version of the Widev Server Developped with Play Framework (Scala)
 ## IDE Configuration 
 
 ```activator idea``` # Create an IDEA Structure
+
+## Usage in local
+
+    change your hosts file with the configuration : ```127.0.0.1  widev-int.herokuapp.com```
+    run play with the 80 port : ```sudo activator run -Dhttp.port=80```
