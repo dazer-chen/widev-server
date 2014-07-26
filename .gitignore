@@ -5,6 +5,6 @@
 /.project
 /.classpath
 target/
-project/target/
+project/project
 logs/
 .idea_modules/
