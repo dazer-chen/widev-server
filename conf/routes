@@ -9,8 +9,8 @@ GET     /                           controllers.Application.index
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
 # Oauth Github
-
 GET     /github/callback            controllers.Authentification.githubCallback(code: String)
 GET     /github/signin              controllers.Authentification.githubSigning
 
-
+# OAuth2 provider
+POST    /oauth2/access_token        controllers.OAuth2ProviderController.accessToken
