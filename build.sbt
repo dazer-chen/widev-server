@@ -17,5 +17,6 @@ libraryDependencies ++= Seq(
   "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT",
   "com.nulab-inc" %% "play2-oauth2-provider" % "0.7.2",
   "joda-time" %  "joda-time" % "2.1",
-  "org.joda" % "joda-convert" % "1.2"
+  "org.joda" % "joda-convert" % "1.2",
+  "org.mockito" % "mockito-core" % "1.9.5" % "test"
 )
