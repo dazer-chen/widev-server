@@ -1,20 +1,15 @@
 package controllers
 
-import controllers.Application._
 import library.GithubOauth2
-import play.api._
-import play.api.mvc._
-
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.mvc._
 import play.modules.reactivemongo.MongoController
 import reactivemongo.api.collections.default.BSONCollection
-
 
 /**
  * Created by gaetansenn on 26/07/2014.
  */
-object Authentification extends Controller with MongoController{
-
+object Authentification extends Controller with MongoController {
   def collection: BSONCollection = db.collection("users")
 
   def githubSigning = Action {

@@ -14,13 +14,17 @@ case object PasswordGrandType extends GrandType { override val value = 2 }
 case object ClientCredentialsGrandType extends GrandType { override val value = 3 }
 
 object GrandType {
+  def apply(value: Int): GrandType = value match {
+    case AuthorizationCodeGrandType.value => AuthorizationCodeGrandType
+    case ImplicitGrandType.value => ImplicitGrandType
+    case PasswordGrandType.value => PasswordGrandType
+    case ClientCredentialsGrandType.value => ClientCredentialsGrandType
+  }
+
+  def apply(value: String): GrandType = apply(value.toInt)
+
   implicit object BSONRoleHandler extends BSONHandler[BSONInteger, GrandType] {
-    override def read(bson: BSONInteger): GrandType = bson.value match {
-      case AuthorizationCodeGrandType.value => AuthorizationCodeGrandType
-      case ImplicitGrandType.value => ImplicitGrandType
-      case PasswordGrandType.value => PasswordGrandType
-      case ClientCredentialsGrandType.value => ClientCredentialsGrandType
-    }
+    override def read(bson: BSONInteger): GrandType = apply(bson.value)
     override def write(t: GrandType): BSONInteger = BSONInteger(t match {
       case AuthorizationCodeGrandType => AuthorizationCodeGrandType.value
       case ImplicitGrandType => ImplicitGrandType.value

@@ -1,7 +1,9 @@
 package models
 
-import play.api.libs.json._
-import reactivemongo.bson.{Macros, BSONObjectID}
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
+
+import scala.concurrent.ExecutionContext
 
 /**
  * Created by trupin on 7/26/14.
@@ -19,4 +21,7 @@ case class User(
 
 object User {
   implicit val handler = Macros.handler[User]
+
+  def findUser(name: String, password: String)(collection: BSONCollection)(implicit ec: ExecutionContext) =
+    collection.find(BSONDocument("name" -> name, "password" -> password)).one[User]
 }

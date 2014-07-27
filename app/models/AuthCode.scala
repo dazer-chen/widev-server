@@ -1,8 +1,9 @@
 package models
 
-import lib.util.Implicits
+import lib.Collection
 import org.joda.time.DateTime
-import reactivemongo.bson.{BSONObjectID, Macros}
+import reactivemongo.api.DefaultDB
+import reactivemongo.bson._
 
 /**
  * Created by trupin on 7/26/14.
@@ -18,7 +19,11 @@ case class AuthCode(
                      )
 
 object AuthCode {
-  import lib.util.Implicits.BSONDateTimeHandler
-
   implicit val handler = Macros.handler[AuthCode]
+}
+
+case class AuthCodeCollection[S](db: DefaultDB) extends Collection[S](db) {
+  val collectionName = "auth-codes"
+
+
 }
