@@ -1,10 +1,11 @@
 package models
 
+import lib.Collection
 import org.joda.time.DateTime
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.DefaultDB
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
-import scala.concurrent.{ExecutionContext}
+import scala.concurrent.ExecutionContext
 
 /**
  * Created by trupin on 7/26/14.
@@ -20,6 +21,7 @@ case class AccessToken(
                         )
 
 object AccessToken {
+  import lib.util.Implicits.BSONDateTimeHandler
 
   implicit val handler = Macros.handler[AccessToken]
 
@@ -30,12 +32,16 @@ object AccessToken {
     expiresIn = Some(token.expiresIn),
     createdAt = token.createdAt.toDate
   )
+}
 
-  def findToken(userId: BSONObjectID, clientId: BSONObjectID)(collection: BSONCollection)(implicit ec: ExecutionContext) =
+case class AccessTokens(db: DefaultDB) extends Collection(db) {
+  val collectionName = "access-tokens"
+
+  def findToken(userId: BSONObjectID, clientId: BSONObjectID)(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("userId" -> userId, "clientId" -> clientId)).one[AccessToken]
 
-  def deleteExistingAndCreate(accessToken: AccessToken)(collection: BSONCollection)(implicit ec: ExecutionContext) =
+  def deleteExistingAndCreate(accessToken: AccessToken)(implicit ec: ExecutionContext) =
     collection.remove(BSONDocument("userId" -> accessToken.userId, "clientId" -> accessToken.clientId)).map {
-      _ => collection.insert(AccessToken)
+      _ => collection.insert(accessToken)
     }
 }

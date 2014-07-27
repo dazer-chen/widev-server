@@ -1,11 +1,10 @@
 package lib.oauth
 
 import lib.util.Crypto
-import models.{GrandType, Client, User}
-import reactivemongo.api.collections.default.BSONCollection
+import models._
 import reactivemongo.bson.BSONObjectID
 
-import scala.concurrent.Await
+import scala.concurrent.{ExecutionContext, Await}
 import scala.concurrent.duration._
 import scalaoauth2.provider.{AccessToken, AuthInfo, DataHandler}
 
@@ -13,18 +12,19 @@ import scalaoauth2.provider.{AccessToken, AuthInfo, DataHandler}
  * Created by trupin on 7/26/14.
  */
 case class OAuth2ProviderDataHandler(
-                                      clients: BSONCollection,
-                                      users: BSONCollection,
-                                      accessTokens: BSONCollection
-                                      ) extends DataHandler[User] {
+                                      clients: Clients,
+                                      users: Users,
+                                      accessTokens: AccessTokens
+                                      )
+                                    (implicit ec: ExecutionContext) extends DataHandler[User] {
 
   val timeout = 100.milliseconds
 
   def validateClient(clientId: String, clientSecret: String, grantType: String): Boolean =
-    Await.result(Client.validate(BSONObjectID(clientId), clientSecret, GrandType(grantType))(clients), timeout)
+    Await.result(clients.validate(BSONObjectID(clientId), clientSecret, GrandType(grantType)), timeout)
 
   def findUser(username: String, password: String): Option[User] =
-    Await.result(User.findUser(username, password)(users), timeout)
+    Await.result(users.findUser(username, password), timeout)
 
   def createAccessToken(authInfo: AuthInfo[User]): AccessToken = {
     val token = models.AccessToken(
@@ -35,12 +35,12 @@ case class OAuth2ProviderDataHandler(
       scope = authInfo.scope,
       expiresIn = (60 * 60).toLong
     )
-    Await.result(models.AccessToken.deleteExistingAndCreate(token)(accessTokens), timeout)
+    Await.result(accessTokens.deleteExistingAndCreate(token), timeout)
     models.AccessToken.convert(token)
   }
 
   def getStoredAccessToken(authInfo: AuthInfo[User]): Option[AccessToken] =
-    Await.result(models.AccessToken.findToken(userId = authInfo.user._id, clientId = BSONObjectID(authInfo.clientId))(accessTokens).map {
+    Await.result(accessTokens.findToken(userId = authInfo.user._id, clientId = BSONObjectID(authInfo.clientId)).map {
       case Some(token) => Some(models.AccessToken.convert(token))
       case _ => None
     }, timeout)
@@ -48,7 +48,7 @@ case class OAuth2ProviderDataHandler(
   def refreshAccessToken(authInfo: AuthInfo[User], refreshToken: String): AccessToken =
     createAccessToken(authInfo)
 
-  def findAuthInfoByCode(code: String): Option[AuthInfo[User]] =
+  def findAuthInfoByCode(code: String): Option[AuthInfo[User]] = ???
 
 
   def findAuthInfoByRefreshToken(refreshToken: String): Option[AuthInfo[User]] = ???

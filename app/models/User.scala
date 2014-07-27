@@ -1,5 +1,7 @@
 package models
 
+import lib.Collection
+import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
@@ -21,7 +23,11 @@ case class User(
 
 object User {
   implicit val handler = Macros.handler[User]
+}
 
-  def findUser(name: String, password: String)(collection: BSONCollection)(implicit ec: ExecutionContext) =
+case class Users(db: DefaultDB) extends Collection(db) {
+  val collectionName = "users"
+
+  def findUser(name: String, password: String)(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("name" -> name, "password" -> password)).one[User]
 }

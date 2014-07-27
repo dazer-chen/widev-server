@@ -19,11 +19,11 @@ case class AuthCode(
                      )
 
 object AuthCode {
+  import lib.util.Implicits.BSONDateTimeHandler
+
   implicit val handler = Macros.handler[AuthCode]
 }
 
-case class AuthCodeCollection[S](db: DefaultDB) extends Collection[S](db) {
+case class AuthCodeCollection(db: DefaultDB) extends Collection(db) {
   val collectionName = "auth-codes"
-
-
 }

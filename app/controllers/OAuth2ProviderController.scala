@@ -9,6 +9,7 @@ import scalaoauth2.provider.OAuth2Provider
  */
 object OAuth2ProviderController extends Controller with OAuth2Provider {
   def accessToken = Action { implicit request =>
-    issueAccessToken(new OAuth2ProviderDataHandler())
+//    issueAccessToken(new OAuth2ProviderDataHandler())
+    Ok("youpi")
   }
 }
