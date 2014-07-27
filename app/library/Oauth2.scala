@@ -39,6 +39,10 @@ trait Oauth2 {
     return url
   }
 
+  def graphCall(graphUrl: String, accessToken: String): Future[WSResponse] = {
+    return WS.url(graphUrl + "?access_token=" + accessToken).get()
+  }
+
   // return a valid access_token
   def authenticate(code: String): Future[String] = {
 

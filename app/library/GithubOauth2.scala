@@ -1,7 +1,16 @@
 package library
 
-import play.api.libs.ws.WSResponse
+import models.User
+import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
+
 import play.core.parsers.FormUrlEncodedParser
+import reactivemongo.bson.BSONObjectID
+import scala.concurrent.{Future}
+import play.api.libs.ws.{WSResponse}
+
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Created by gaetansenn on 26/07/2014.
@@ -19,11 +28,32 @@ object GithubOauth2 extends Oauth2 {
   val responseType = ""
   val grantType = ""
 
+  case class Response (email: String, name: String, username: String)
+
+  implicit val userReads: Reads[Response] = (
+    (JsPath \ "email").read[String] and
+    (JsPath \ "name").read[String] and
+    (JsPath \ "username").read[String]
+  )(Response.apply _)
+
   def token(resp: WSResponse): String = {
     println(resp.body)
     FormUrlEncodedParser.parse(resp.body).get("access_token").flatMap(_.headOption) match {
       case Some(test) => test
       case None => throw library.AccessTokenError
+    }
+  }
+
+  def getUserInformation(access_token: String): Future[User] = {
+    GithubOauth2.graphCall("https://api.github.com/user", access_token).map { response =>
+      Json.parse(response.body).validate[Response] match {
+        case s: JsSuccess[Response] => {
+          val response = s.get
+          User(lastName = Option(response.name), email = response.email, password = "", username = response.username)
+        }
+        case e: JsError => throw new RuntimeException(e.toString)
+      }
+
     }
   }
 }
