@@ -30,3 +30,11 @@ New version of the Widev Server Developped with Play Framework (Scala)
 
     change your hosts file with the configuration : ```127.0.0.1  widev-int.herokuapp.com```
     run play with the 80 port : ```sudo activator run -Dhttp.port=80```
+    
+## Tools
+
+* Trello: https://trello.com/b/1qdsF7be/widev
+* Codeship: https://www.codeship.io
+* Heroku: 
+** production: http://widev.herokuapp.com
+** integration: http://widev-int.herokuapp.com
