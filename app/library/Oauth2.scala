@@ -7,14 +7,13 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 
-trait OauthException extends Throwable
-
-case object AccessTokenError extends OauthException
 
 /**
  * Created by gaetansenn on 26/07/2014.
  */
 trait Oauth2 {
+
+  case class AccessTokenError(message: String) extends Exception(message)
 
   val clientId: String
   val clientSecret: String
