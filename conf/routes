@@ -8,10 +8,6 @@ GET     /                                   controllers.Application.index
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)
 
-# Default Auth
-
-POST    /user/auth
-
 # Oauth Github
 GET     /github/callback                    controllers.Authentification.githubCallback(code: String)
 GET     /github/signin                      controllers.Authentification.githubSigning
