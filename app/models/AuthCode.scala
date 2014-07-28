@@ -5,6 +5,9 @@ import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson._
 
+import scala.concurrent.{Future, ExecutionContext}
+import lib.util.Implicits.BSONDateTimeHandler
+
 /**
  * Created by trupin on 7/26/14.
  */
@@ -12,18 +15,22 @@ case class AuthCode(
                      authorizationCode: String,
                      userId: BSONObjectID,
                      clientId: BSONObjectID,
-                     expiresIn: Int,
                      redirectUri: Option[String] = None,
                      scope: Option[String] = None,
-                     createdAt: DateTime = DateTime.now
+                     createdAt: DateTime = DateTime.now,
+                     expiresAt: DateTime = DateTime.now.plusHours(1)
                      )
 
 object AuthCode {
-  import lib.util.Implicits.BSONDateTimeHandler
-
   implicit val handler = Macros.handler[AuthCode]
 }
 
-case class AuthCodeCollection(db: DefaultDB) extends Collection(db) {
+case class AuthCodes(db: DefaultDB) extends Collection(db) {
   val collectionName = "auth-codes"
+
+  def findByCode(code: String)(implicit ec: ExecutionContext): Future[Option[AuthCode]] =
+    collection.find(BSONDocument(
+      "authorizationCode" -> code,
+      "expiresAt" -> BSONDocument("$gte" -> DateTime.now)
+    )).one[AuthCode]
 }

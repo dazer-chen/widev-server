@@ -2,10 +2,9 @@ package models
 
 import lib.Collection
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 
 /**
  * Created by trupin on 7/26/14.
@@ -28,6 +27,9 @@ object User {
 case class Users(db: DefaultDB) extends Collection(db) {
   val collectionName = "users"
 
-  def findUser(name: String, password: String)(implicit ec: ExecutionContext) =
+  def findById(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[User]] =
+    collection.find(BSONDocument("_id" -> id)).one[User]
+
+  def find(name: String, password: String)(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("name" -> name, "password" -> password)).one[User]
 }

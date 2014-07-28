@@ -14,10 +14,10 @@ case class AccessToken(
                         accessToken: String,
                         userId: BSONObjectID,
                         clientId: BSONObjectID,
-                        expiresIn: Long,
                         refreshToken: Option[String] = None,
                         scope: Option[String] = None,
-                        createdAt: DateTime = DateTime.now
+                        createdAt: DateTime = DateTime.now,
+                        expiresAt: DateTime = DateTime.now.plusHours(1)
                         )
 
 object AccessToken {
@@ -29,7 +29,7 @@ object AccessToken {
     token = token.accessToken,
     refreshToken = token.refreshToken,
     scope = token.scope,
-    expiresIn = Some(token.expiresIn),
+    expiresIn = Some((token.expiresAt.getMillis - token.createdAt.getMillis) / 1000),
     createdAt = token.createdAt.toDate
   )
 }
@@ -44,4 +44,15 @@ case class AccessTokens(db: DefaultDB) extends Collection(db) {
     collection.remove(BSONDocument("userId" -> accessToken.userId, "clientId" -> accessToken.clientId)).map {
       _ => collection.insert(accessToken)
     }
+
+  def findRefreshToken(token: String)(implicit ec: ExecutionContext) =
+    collection.find(BSONDocument("refreshToken" -> token)).one[AccessToken]
+
+  def findByToken(token: String)(implicit ec: ExecutionContext) =
+    collection.find(BSONDocument("accessToken" -> token)).one[AccessToken]
+
+  def find(clientId: BSONObjectID, scope: Option[String])(implicit ec: ExecutionContext) =
+    collection.find(BSONDocument("clientId" -> clientId) ++ (
+      if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument()
+    )).one[AccessToken]
 }

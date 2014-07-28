@@ -29,4 +29,9 @@ case class Clients(db: DefaultDB) extends Collection(db) {
       case Some(_) => true
       case _ => false
     }
+
+  def find(id: BSONObjectID, secret: String, scope: Option[String])(implicit ec: ExecutionContext) =
+    collection.find(BSONDocument("_id" -> id, "secret" -> secret) ++ (
+      if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument()
+    )).one[Client]
 }
