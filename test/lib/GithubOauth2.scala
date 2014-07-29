@@ -1,4 +1,4 @@
-package library
+package lib
 
 import org.junit.runner.RunWith
 import org.specs2.mock.Mockito

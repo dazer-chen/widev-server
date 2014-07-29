@@ -1,16 +1,14 @@
-package library
+package lib.oauth
 
 import models.User
-import play.api.libs.json._
-import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
-
-import play.core.parsers.FormUrlEncodedParser
-import reactivemongo.bson.BSONObjectID
-import scala.concurrent.{Future}
-import play.api.libs.ws.{DefaultWSResponseHeaders, WSResponse}
-
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json._
+import play.api.libs.ws.WSResponse
+import play.core.parsers.FormUrlEncodedParser
+
+import scala.concurrent.Future
 
 /**
  * Created by gaetansenn on 26/07/2014.

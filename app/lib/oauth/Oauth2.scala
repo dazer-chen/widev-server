@@ -1,11 +1,10 @@
-package library
+package lib.oauth
 
-import play.api.libs.ws.{WSResponse, WS}
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.ws.{WS, WSResponse}
 
 import scala.concurrent.Future
-
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
 
 
 /**
