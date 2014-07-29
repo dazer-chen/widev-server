@@ -1,7 +1,6 @@
-package lib
+package lib.oauth
 
 import org.junit.runner.RunWith
-import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 import play.api.libs.ws.WSResponse
@@ -12,7 +11,7 @@ import play.api.test.WithApplication
  */
 
 @RunWith(classOf[JUnitRunner])
-class RegisterSpec extends Specification with Mockito {
+class RegisterSpec extends Specification {
   "Oauth2" should {
 
     "Return a valid route url for the signing" in new WithApplication {
@@ -27,6 +26,7 @@ class RegisterSpec extends Specification with Mockito {
         val grantType = ""
       } with Oauth2 {
         override def token(resp: WSResponse): String = ???
+
         signIn() must equalTo("http://oauth.test?client_id=clientIdTest&redirect_uri=/oauth/redirect&scope=test,test2")
       }
     }

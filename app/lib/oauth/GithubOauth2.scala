@@ -58,9 +58,9 @@ object GithubOauth2 extends Oauth2 with GitHubAPI {
   }
 
   //  Convert a github json result to a model
-  private case class UserResponse(email: String, name: String, username: String)
+  private[oauth] case class UserResponse(email: String, name: String, username: String)
 
-  private implicit val userReads: Reads[UserResponse] = (
+  private[oauth] implicit val userReads: Reads[UserResponse] = (
     (JsPath \ "email").read[String] and
     (JsPath \ "name").read[String] and
     (JsPath \ "login").read[String]
@@ -68,7 +68,7 @@ object GithubOauth2 extends Oauth2 with GitHubAPI {
 
 
   //  Handler functions
-  private def UserHandler(response: String): User = {
+  private[oauth] def UserHandler(response: String): User = {
     println(response)
     Json.parse(response).validate[UserResponse] match {
       case s: JsSuccess[UserResponse] => {
