@@ -10,4 +10,5 @@ import org.specs2.runner.JUnitRunner
  */
 @RunWith(classOf[JUnitRunner])
 class GithubOauth2 extends Specification with Mockito {
+
 }
