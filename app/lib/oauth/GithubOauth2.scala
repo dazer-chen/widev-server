@@ -1,6 +1,6 @@
 package lib.oauth
 
-import models.User
+import models.{NormalUser, User}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
@@ -73,7 +73,7 @@ object GithubOauth2 extends Oauth2 with GitHubAPI {
     Json.parse(response).validate[UserResponse] match {
       case s: JsSuccess[UserResponse] => {
         val response = s.get
-        User(lastName = Option(response.name), email = response.email, password = "", username = response.username)
+        User(lastName = Option(response.name), email = response.email, password = "", username = response.username, permission = NormalUser)
       }
       case e: JsError => throw new UserHandlerError(e.toString)
     }

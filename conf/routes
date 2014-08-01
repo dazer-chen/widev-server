@@ -17,3 +17,9 @@ GET     /github/authentification/fail       controllers.Authentification.fail(to
 
 # OAuth2 provider
 POST    /oauth2/access_token                controllers.OAuth2ProviderController.accessToken
+
+# Authentification routes
+POST    /authenticate                       controllers.Application.authenticate
+
+
+GET     /test                               controllers.Application.test

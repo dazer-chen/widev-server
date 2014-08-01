@@ -2,7 +2,7 @@ package models
 
 import lib.Collection
 import reactivemongo.api.DefaultDB
-import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
+import reactivemongo.bson._
 
 import scala.concurrent.{Future, ExecutionContext}
 
@@ -17,10 +17,12 @@ case class User(
                  password: String,
                  firstName: Option[String] = None,
                  lastName: Option[String] = None,
-                 gitHub: Option[String] = None
+                 gitHub: Option[String] = None,
+                 permission: Permission
                  )
 
 object User {
+  import Permission._
   implicit val handler = Macros.handler[User]
 }
 
@@ -30,6 +32,6 @@ case class Users(db: DefaultDB) extends Collection(db) {
   def findById(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[User]] =
     collection.find(BSONDocument("_id" -> id)).one[User]
 
-  def find(name: String, password: String)(implicit ec: ExecutionContext) =
-    collection.find(BSONDocument("name" -> name, "password" -> password)).one[User]
+  def find(username: String, password: String)(implicit ec: ExecutionContext): Future[Option[User]] =
+    collection.find(BSONDocument("name" -> username, "password" -> password)).one[User]
 }

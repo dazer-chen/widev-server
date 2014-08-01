@@ -18,5 +18,7 @@ libraryDependencies ++= Seq(
   "com.nulab-inc" %% "play2-oauth2-provider" % "0.7.2",
   "joda-time" %  "joda-time" % "2.1",
   "org.joda" % "joda-convert" % "1.2",
-  "org.mockito" % "mockito-core" % "1.9.5" % "test"
+  "org.mockito" % "mockito-core" % "1.9.5" % "test",
+  "jp.t2v" %% "play2-auth" % "0.12.0",
+  "jp.t2v" %% "play2-auth-test" % "0.12.0" % "test"
 )
