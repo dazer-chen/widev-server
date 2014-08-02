@@ -12,10 +12,10 @@ GET     /                                   controllers.Application.index
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)
 
 # Oauth Github
-GET     /github/callback                    controllers.Authentification.githubCallback(code: String)
-GET     /github/signin                      controllers.Authentification.githubSigning
-GET     /github/authentification/success    controllers.Authentification.success(token_session: String)
-GET     /github/authentification/fail       controllers.Authentification.fail(token_session: String)
+GET     /github/callback                    controllers.Authentication.githubCallback(code: String)
+GET     /github/signin                      controllers.Authentication.githubSigning
+GET     /github/authentication/success      controllers.Authentication.success(token_session: String)
+GET     /github/authentication/fail         controllers.Authentication.fail(token_session: String)
 
 
 # OAuth2 provider

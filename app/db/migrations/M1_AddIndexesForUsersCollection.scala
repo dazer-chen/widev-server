@@ -16,8 +16,8 @@ object M1_AddIndexesForUsersCollection extends Migration {
     val indexes = users.collection.indexesManager
 
     Future.sequence(Seq(
-      indexes.create(Index(List("username" -> IndexType.Text, "password" -> IndexType.Text), unique = true)),
-      indexes.create(Index(List("email" -> IndexType.Text, "password" -> IndexType.Text), unique = true))
+      indexes.create(Index(List("username" -> IndexType.Ascending, "password" -> IndexType.Ascending), unique = true)),
+      indexes.create(Index(List("email" -> IndexType.Ascending, "password" -> IndexType.Ascending), unique = true))
     )).mapTo[Unit]
   }
 }

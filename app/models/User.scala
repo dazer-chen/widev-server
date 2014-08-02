@@ -1,11 +1,12 @@
 package models
 
 import lib.mongo.Collection
+import play.api.libs.json.{Json, Writes}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Created by trupin on 7/26/14.
@@ -19,12 +20,23 @@ case class User(
                  firstName: Option[String] = None,
                  lastName: Option[String] = None,
                  gitHub: Option[String] = None,
-                 permission: Permission = Authenticated
+                 permission: Permission = Visitor
                  )
 
 object User {
-  import Permission._
   implicit val handler = Macros.handler[User]
+
+  //Json write Handler
+  implicit val UserWrites = new Writes[User] {
+    def writes(model: User) = Json.obj(
+      "email" -> model.email,
+      "username" -> model.username,
+      "password" -> model.password,
+      "firstName" -> model.firstName,
+      "lastName" -> model.lastName
+    )
+  }
+
 }
 
 case class Users(db: DefaultDB) extends Collection {
@@ -37,5 +49,5 @@ case class Users(db: DefaultDB) extends Collection {
     collection.find(BSONDocument("_id" -> id)).one[User]
 
   def find(username: String, password: String)(implicit ec: ExecutionContext): Future[Option[User]] =
-    collection.find(BSONDocument("name" -> username, "password" -> password)).one[User]
+    collection.find(BSONDocument("username" -> username, "password" -> password)).one[User]
 }

@@ -1,7 +1,7 @@
 package controllers
 
-import jp.t2v.lab.play2.auth.AuthElement
-import models.{Authenticated, Users}
+import jp.t2v.lab.play2.auth.{AuthElement, LoginLogout}
+import models._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsError, JsPath, Json, Reads}
@@ -10,7 +10,10 @@ import play.modules.reactivemongo._
 
 import scala.concurrent.Future
 
-object Application extends Controller with MongoController with AuthElement with AuthConfigImpl {
+object Application extends Controller with MongoController with LoginLogout with AuthElement with AuthConfigImpl {
+
+  val users = Users(db)
+
   def index = Action {
     Ok(views.html.index("Your new application is ready."))
   }
@@ -39,12 +42,12 @@ object Application extends Controller with MongoController with AuthElement with
     val UserLoginResult = request.body.validate[UserLogin]
     UserLoginResult.fold(
       errors => {
-        Future.successful(BadRequest(Json.obj("status" ->"KO", "message" -> JsError.toFlatJson(errors))))
+        Future.successful(BadRequest(JsonFormat.generateError(JsonError(1234, "", "BadRequest", BAD_REQUEST, "Please refer to the documentation", JsError.toFlatJson(errors).toString(), None))))
       },
       login => {
-        Users(db).find(login.login, login.password).map {
-          case Some(u) => Ok(Json.obj("status" ->"OK", "message" -> "success" ))
-          case _ => BadRequest(Json.obj("status" -> "KO", "message" -> "login or passoword incorect"))
+        users.find(login.login, login.password).flatMap {
+          case Some(u) => gotoLoginSucceeded(u._id.toString())
+          case _ => Future.successful(BadRequest(Json.obj("status" -> "KO", "message" -> "login or passoword incorect")))
         }
       }
     )

@@ -11,6 +11,8 @@ import jp.t2v.lab.play2.auth.AuthConfig
 import play.modules.reactivemongo._
 import models.{Authenticated, Administrator, Permission, Users}
 import play.api.mvc._
+import reactivemongo.bson._
+
 
 
 import play.api.Play.current
@@ -25,7 +27,7 @@ trait AuthConfigImpl extends AuthConfig with Results {
    * A type that is used to identify a user.
    * `String`, `Int`, `Long` and so on.
    */
-  type Id = BSONObjectID
+  type Id = String
 
   /**
    * A type that represents a user in your application.
@@ -60,7 +62,11 @@ trait AuthConfigImpl extends AuthConfig with Results {
    */
   def resolveUser(id: Id)(implicit context: ExecutionContext): Future[Option[User]] = {
     def db = ReactiveMongoPlugin.db
-    Users(db).findById(id)
+    Users(db).findById(BSONObjectID(id)).map {
+      res =>
+        println(s"-------> $res")
+        res
+    }
   }
 
   /**
@@ -79,7 +85,7 @@ trait AuthConfigImpl extends AuthConfig with Results {
    * If the user is not logged in and tries to access a protected resource then redirect them as follows:
    */
   def authenticationFailed(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] =
-    Future.successful(Ok(Json.obj("error" -> "resource not allowed")))
+    Future.successful(Unauthorized(Json.obj("error" -> "resource not allowed")))
 
   /**
    * If authorization failed (usually incorrect password) redirect the user as follows:
@@ -98,11 +104,4 @@ trait AuthConfigImpl extends AuthConfig with Results {
       case _                        => false
     }
   }
-
-  /**
-   * Whether use the secure option or not use it in the cookie.
-   * However default is false, I strongly recommend using true in a production.
-   */
-  override lazy val cookieSecureOption: Boolean = play.api.Play.isProd(play.api.Play.current)
-
 }

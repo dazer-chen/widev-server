@@ -12,7 +12,7 @@ import scala.concurrent.Future
 /**
  * Created by gaetansenn on 26/07/2014.
  */
-object Authentification extends Controller with MongoController {
+object Authentication extends Controller with MongoController {
   def collection: BSONCollection = db.collection("users")
 
   def githubSigning = Action {
@@ -34,11 +34,11 @@ object Authentification extends Controller with MongoController {
 
 
         // send a callback request with the form element to register the user
-        Redirect(routes.Authentification.success("return_the_token_of_session"))
+        Redirect(routes.Authentication.success("return_the_token_of_session"))
       }
     }.recover {
-      case error: GithubOauth2.UserHandlerError => Redirect(routes.Authentification.fail(error.message))
-      case error: GithubOauth2.AccessTokenError => Redirect(routes.Authentification.fail(error.message))
+      case error: GithubOauth2.UserHandlerError => Redirect(routes.Authentication.fail(error.message))
+      case error: GithubOauth2.AccessTokenError => Redirect(routes.Authentication.fail(error.message))
     }
   }
 
