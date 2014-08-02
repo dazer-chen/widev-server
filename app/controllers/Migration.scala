@@ -11,10 +11,6 @@ import play.api.libs.concurrent.Execution.Implicits._
  */
 object Migration extends Controller with MongoController {
 
-  def index = Action {
-    Ok(views.html.index("Your new application is ready."))
-  }
-
   def run = Action.async {
     Migrations.run(db).map {
       migrations => Ok(migrations.toString())
