@@ -1,6 +1,6 @@
 package models
 
-import lib.Collection
+import lib.mongo.Collection
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection

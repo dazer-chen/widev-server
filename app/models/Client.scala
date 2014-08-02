@@ -1,6 +1,6 @@
 package models
 
-import lib.Collection
+import lib.mongo.Collection
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}

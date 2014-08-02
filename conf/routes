@@ -2,6 +2,9 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
+# Migrations
+GET     /migrate                            controllers.Migration.run
+
 # Home page
 GET     /                                   controllers.Application.index
 
