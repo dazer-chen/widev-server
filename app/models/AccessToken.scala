@@ -3,6 +3,7 @@ package models
 import lib.Collection
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
 import scala.concurrent.ExecutionContext
@@ -34,8 +35,8 @@ object AccessToken {
   )
 }
 
-case class AccessTokens(db: DefaultDB) extends Collection(db) {
-  val collectionName = "access-tokens"
+case class AccessTokens(db: DefaultDB) extends Collection {
+  val collection = db.collection[BSONCollection]("access-tokens")
 
   def findToken(userId: BSONObjectID, clientId: BSONObjectID)(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("userId" -> userId, "clientId" -> clientId)).one[AccessToken]

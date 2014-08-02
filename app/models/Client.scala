@@ -2,6 +2,7 @@ package models
 
 import lib.Collection
 import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,8 +22,8 @@ object Client {
   implicit val handler = Macros.handler[Client]
 }
 
-case class Clients(db: DefaultDB) extends Collection(db) {
-  val collectionName = "clients"
+case class Clients(db: DefaultDB) extends Collection {
+  val collection = db.collection[BSONCollection]("clients")
 
   def validate(id: BSONObjectID, secret: String, grandType: GrandType)(implicit ec: ExecutionContext): Future[Boolean] =
     collection.find(BSONDocument("_id" -> id, "secret" -> secret, "grandType" -> grandType.value)).one[Client].map {

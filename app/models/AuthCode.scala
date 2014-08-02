@@ -3,6 +3,7 @@ package models
 import lib.Collection
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 
 import scala.concurrent.{Future, ExecutionContext}
@@ -25,8 +26,8 @@ object AuthCode {
   implicit val handler = Macros.handler[AuthCode]
 }
 
-case class AuthCodes(db: DefaultDB) extends Collection(db) {
-  val collectionName = "auth-codes"
+case class AuthCodes(db: DefaultDB) extends Collection {
+  val collection = db.collection[BSONCollection]("auth-codes")
 
   def findByCode(code: String)(implicit ec: ExecutionContext): Future[Option[AuthCode]] =
     collection.find(BSONDocument(

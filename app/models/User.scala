@@ -2,6 +2,7 @@ package models
 
 import lib.Collection
 import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 
 import scala.concurrent.{Future, ExecutionContext}
@@ -26,8 +27,8 @@ object User {
   implicit val handler = Macros.handler[User]
 }
 
-case class Users(db: DefaultDB) extends Collection(db) {
-  val collectionName = "users"
+case class Users(db: DefaultDB) extends Collection {
+  val collection = db.collection[BSONCollection]("users")
 
   def create(user: User)(implicit ec: ExecutionContext): Future[User] =
     collection.insert[User](user).map { _ => user }
