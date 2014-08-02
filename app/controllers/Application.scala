@@ -1,21 +1,16 @@
 package controllers
 
 import jp.t2v.lab.play2.auth.AuthElement
-import models.{Users, NormalUser}
-import play.api.libs.json.{JsError, JsPath, Reads, Json}
+import models.{Authenticated, Users}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsError, JsPath, Json, Reads}
 import play.api.mvc._
 import play.modules.reactivemongo._
-import reactivemongo.api.collections.default.BSONCollection
-import play.api.libs.functional.syntax._
-import play.api.libs.concurrent.Execution.Implicits._
-
 
 import scala.concurrent.Future
 
 object Application extends Controller with MongoController with AuthElement with AuthConfigImpl {
-
-  def collection: BSONCollection = db.collection("users")
-
   def index = Action {
     Ok(views.html.index("Your new application is ready."))
   }
@@ -28,7 +23,7 @@ object Application extends Controller with MongoController with AuthElement with
     Ok(Json.obj("login" -> "fail"))
   }
 
-  def test = StackAction(AuthorityKey -> NormalUser) { implicit request =>
+  def test = StackAction(AuthorityKey -> Authenticated) { implicit request =>
     Ok("ok")
   }
 

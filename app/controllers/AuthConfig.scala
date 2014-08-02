@@ -9,7 +9,7 @@ import scala.reflect._
 import play.api.mvc.{Result, SimpleResult, RequestHeader}
 import jp.t2v.lab.play2.auth.AuthConfig
 import play.modules.reactivemongo._
-import models.{NormalUser, Administrator, Permission, Users}
+import models.{Authenticated, Administrator, Permission, Users}
 import play.api.mvc._
 
 
@@ -94,7 +94,7 @@ trait AuthConfigImpl extends AuthConfig with Results {
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {
     (user.permission, authority) match {
       case (Administrator, _)       => true
-      case (NormalUser, NormalUser) => true
+      case (Authenticated, Authenticated) => true
       case _                        => false
     }
   }

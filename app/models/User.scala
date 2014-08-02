@@ -18,7 +18,7 @@ case class User(
                  firstName: Option[String] = None,
                  lastName: Option[String] = None,
                  gitHub: Option[String] = None,
-                 permission: Permission
+                 permission: Permission = Authenticated
                  )
 
 object User {
@@ -28,6 +28,9 @@ object User {
 
 case class Users(db: DefaultDB) extends Collection(db) {
   val collectionName = "users"
+
+  def create(user: User)(implicit ec: ExecutionContext): Future[User] =
+    collection.insert[User](user).map { _ => user }
 
   def findById(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[User]] =
     collection.find(BSONDocument("_id" -> id)).one[User]
