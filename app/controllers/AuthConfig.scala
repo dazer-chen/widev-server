@@ -1,27 +1,26 @@
 package controllers
 
-import jp.t2v.lab.play2.auth.{CookieIdContainer, IdContainer, AuthConfig}
-import play.api.libs.json.Json
-import reactivemongo.api.DefaultDB
-import reactivemongo.bson.BSONObjectID
-import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect._
-import play.api.mvc.{Result, SimpleResult, RequestHeader}
 import jp.t2v.lab.play2.auth.AuthConfig
-import play.modules.reactivemongo._
-import models.{Authenticated, Administrator, Permission, Users}
+import models._
+import play.api.Play.current
+import play.api.libs.json.Json
 import play.api.mvc._
+import play.modules.reactivemongo._
 import reactivemongo.bson._
 
-
-
-import play.api.Play.current
+import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect._
 
 /**
  * Created by gaetansenn on 01/08/2014.
  */
 
 trait AuthConfigImpl extends AuthConfig with Results {
+
+  lazy val factory = {
+    import play.api.libs.concurrent.Execution.Implicits._
+    Factory(ReactiveMongoPlugin.db)
+  }
 
   /**
    * A type that is used to identify a user.
@@ -62,7 +61,7 @@ trait AuthConfigImpl extends AuthConfig with Results {
    */
   def resolveUser(id: Id)(implicit context: ExecutionContext): Future[Option[User]] = {
     def db = ReactiveMongoPlugin.db
-    Users(db).findById(BSONObjectID(id)).map {
+    Users(db).find(BSONObjectID(id)).map {
       res =>
         println(s"-------> $res")
         res

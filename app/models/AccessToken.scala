@@ -1,12 +1,12 @@
 package models
 
-import lib.mongo.Collection
+import lib.mongo.{SuperCollection, CannotEnsureRelation, Collection}
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 
 /**
  * Created by trupin on 7/26/14.
@@ -35,10 +35,25 @@ object AccessToken {
   )
 }
 
-case class AccessTokens(db: DefaultDB) extends Collection {
+case class AccessTokens(db: DefaultDB) extends Collection[AccessToken] {
   val collection = db.collection[BSONCollection]("access-tokens")
 
-  def findToken(userId: BSONObjectID, clientId: BSONObjectID)(implicit ec: ExecutionContext) =
+  def relations = {
+    import play.api.libs.concurrent.Execution.Implicits._
+    val factory = Factory(db)
+    Seq(
+      factory.users,
+      factory.clients
+    )
+  }
+
+  def generate = AccessToken(
+    accessToken = BSONObjectID.generate.stringify,
+    userId = BSONObjectID.generate,
+    clientId = BSONObjectID.generate
+  )
+
+  def find(userId: BSONObjectID, clientId: BSONObjectID)(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("userId" -> userId, "clientId" -> clientId)).one[AccessToken]
 
   def deleteExistingAndCreate(accessToken: AccessToken)(implicit ec: ExecutionContext) =
@@ -55,5 +70,6 @@ case class AccessTokens(db: DefaultDB) extends Collection {
   def find(clientId: BSONObjectID, scope: Option[String])(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("clientId" -> clientId) ++ (
       if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument()
-    )).one[AccessToken]
+      )).one[AccessToken]
+
 }

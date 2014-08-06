@@ -1,6 +1,6 @@
 package models
 
-import lib.mongo.Collection
+import lib.mongo.{SuperCollection, Collection}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
@@ -22,8 +22,12 @@ object Client {
   implicit val handler = Macros.handler[Client]
 }
 
-case class Clients(db: DefaultDB) extends Collection {
+case class Clients(db: DefaultDB) extends Collection[Client] {
   val collection = db.collection[BSONCollection]("clients")
+
+  def relations: Seq[SuperCollection] = Seq.empty
+
+  def generate: Client = Client()
 
   def validate(id: BSONObjectID, secret: String, grandType: GrandType)(implicit ec: ExecutionContext): Future[Boolean] =
     collection.find(BSONDocument("_id" -> id, "secret" -> secret, "grandType" -> grandType.value)).one[Client].map {
@@ -35,4 +39,5 @@ case class Clients(db: DefaultDB) extends Collection {
     collection.find(BSONDocument("_id" -> id, "secret" -> secret) ++ (
       if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument()
     )).one[Client]
+
 }

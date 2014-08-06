@@ -40,7 +40,7 @@ case class OAuth2ProviderDataHandler(
   }
 
   def getStoredAccessToken(authInfo: AuthInfo[User]): Option[AccessToken] =
-    Await.result(accessTokens.findToken(userId = authInfo.user._id, clientId = BSONObjectID(authInfo.clientId)).map {
+    Await.result(accessTokens.find(userId = authInfo.user._id, clientId = BSONObjectID(authInfo.clientId)).map {
       case Some(token) => Some(models.AccessToken.convert(token))
       case _ => None
     }, timeout)
@@ -49,8 +49,8 @@ case class OAuth2ProviderDataHandler(
     createAccessToken(authInfo)
 
   def findAuthInfoByCode(code: String): Option[AuthInfo[User]] =
-    Await.result(authCodes.findByCode(code).flatMap {
-      case Some(authCode) => users.findById(authCode.clientId).map {
+    Await.result(authCodes.find(code).flatMap {
+      case Some(authCode) => users.find(authCode.clientId).map {
         case Some(user) =>
           Some(AuthInfo(
             user = user,
@@ -66,7 +66,7 @@ case class OAuth2ProviderDataHandler(
   def findAuthInfoByRefreshToken(refreshToken: String): Option[AuthInfo[User]] =
     Await.result(accessTokens.findRefreshToken(refreshToken).flatMap {
       case Some(accessToken) =>
-        users.findById(accessToken.userId).map {
+        users.find(accessToken.userId).map {
           case Some(user) => Some(AuthInfo(
             user = user,
             clientId = accessToken.clientId.stringify,
@@ -80,7 +80,7 @@ case class OAuth2ProviderDataHandler(
 
   def findClientUser(clientId: String, clientSecret: String, scope: Option[String]): Option[User] =
     Await.result(accessTokens.find(BSONObjectID(clientId), scope).flatMap {
-      case Some(a) => users.findById(a.userId).flatMap {
+      case Some(a) => users.find(a.userId).flatMap {
         case Some(u) => clients.find(BSONObjectID(clientId), clientSecret, scope).map {
           case Some(_) => Some(u)
           case _ => None
@@ -98,7 +98,7 @@ case class OAuth2ProviderDataHandler(
 
   def findAuthInfoByAccessToken(accessToken: AccessToken): Option[AuthInfo[User]] =
     Await.result(accessTokens.findByToken(accessToken.token).flatMap {
-      case Some(a) => users.findById(a.userId).map {
+      case Some(a) => users.find(a.userId).map {
         case Some(user) => Some(AuthInfo(
           user = user,
           clientId = a.clientId.stringify,

@@ -1,6 +1,6 @@
 package models
 
-import lib.mongo.Collection
+import lib.mongo.{SuperCollection, CannotEnsureRelation, Collection}
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
@@ -26,10 +26,25 @@ object AuthCode {
   implicit val handler = Macros.handler[AuthCode]
 }
 
-case class AuthCodes(db: DefaultDB) extends Collection {
+case class AuthCodes(db: DefaultDB) extends Collection[AuthCode] {
   val collection = db.collection[BSONCollection]("auth-codes")
 
-  def findByCode(code: String)(implicit ec: ExecutionContext): Future[Option[AuthCode]] =
+  def relations: Seq[SuperCollection] = {
+    import play.api.libs.concurrent.Execution.Implicits._
+    val factory = Factory(db)
+    Seq(
+      factory.users,
+      factory.clients
+    )
+  }
+
+  def generate = AuthCode(
+    authorizationCode = BSONObjectID.generate.stringify,
+    userId = BSONObjectID.generate,
+    clientId = BSONObjectID.generate
+  )
+
+  def find(code: String)(implicit ec: ExecutionContext): Future[Option[AuthCode]] =
     collection.find(BSONDocument(
       "authorizationCode" -> code,
       "expiresAt" -> BSONDocument("$gte" -> DateTime.now)

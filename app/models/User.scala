@@ -1,6 +1,6 @@
 package models
 
-import lib.mongo.Collection
+import lib.mongo.{Collection, SuperCollection}
 import play.api.libs.json.{Json, Writes}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
@@ -39,14 +39,16 @@ object User {
 
 }
 
-case class Users(db: DefaultDB) extends Collection {
+case class Users(db: DefaultDB) extends Collection[User] {
   val collection = db.collection[BSONCollection]("users")
 
-  def create(user: User)(implicit ec: ExecutionContext): Future[User] =
-    collection.insert[User](user).map { _ => user }
+  def relations: Seq[SuperCollection] = Seq.empty
 
-  def findById(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[User]] =
-    collection.find(BSONDocument("_id" -> id)).one[User]
+  def generate: User = User(
+    email = BSONObjectID.generate.stringify,
+    username = BSONObjectID.generate.stringify,
+    password = BSONObjectID.generate.stringify
+  )
 
   def find(username: String, password: String)(implicit ec: ExecutionContext): Future[Option[User]] =
     collection.find(BSONDocument("username" -> username, "password" -> password)).one[User]
