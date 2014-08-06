@@ -6,13 +6,12 @@ package models
 
 import play.api.libs.json._
 import play.api.http.Status
-import play.api.libs.json.Reads
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 
 trait JsonException extends Throwable
-trait JsonErrorException extends JsonException
-case object WrongErrorCode extends JsonException
 
-
+case class WrongErrorCode() extends JsonException
 
 object JsonError {
   implicit val JsonErrorWrites = new Writes[JsonError] {
@@ -25,6 +24,16 @@ object JsonError {
       "detail" -> model.detail)
     )
   }
+
+  implicit val jsonErrorRead: Reads[JsonError] = (
+    (JsPath \ "id").read[Long] and
+      (JsPath \ "href").read[String] and
+      (JsPath \ "status").read[String] and
+      (JsPath \ "code").read[Int] and
+      (JsPath \ "title").read[String] and
+      (JsPath \ "detail").read[String] and
+      (JsPath \ "links").readNullable[List[String]]
+    )(JsonError.apply _)
 }
 
 case class JsonError(id: Long,
@@ -42,7 +51,7 @@ case class JsonError(id: Long,
       ErrorsCode contains (code)
   }
 
-  if (!expectedErrorCode()) throw WrongErrorCode
+  if (!expectedErrorCode()) throw WrongErrorCode()
 }
 
 
