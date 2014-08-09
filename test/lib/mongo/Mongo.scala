@@ -1,11 +1,11 @@
-package lib
+package lib.mongo
 
 import db.Migrations
 import models.Factory
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.MongoDriver
 
-import scala.concurrent.{ExecutionContext, Future, Await}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 /**

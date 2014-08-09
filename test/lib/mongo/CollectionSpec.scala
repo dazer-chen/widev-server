@@ -1,5 +1,6 @@
-package lib
+package lib.mongo
 
+import lib.Util
 import org.junit.runner._
 import org.specs2.mutable._
 import org.specs2.runner._
@@ -17,7 +18,7 @@ class CollectionSpec extends Specification with Mongo with Util {
     implicit val handler = Macros.handler[Model1]
   }
 
-  class Model1s(model2s: => Model2s) extends lib.mongo.Collection[Model1] {
+  class Model1s(model2s: => Model2s) extends Collection[Model1] {
     override val collection: BSONCollection = db[BSONCollection]("model1s")
 
     override def relations = Seq(model2s)
@@ -30,7 +31,7 @@ class CollectionSpec extends Specification with Mongo with Util {
     implicit val handler = Macros.handler[Model2]
   }
 
-  class Model2s(model1s: => Model1s) extends lib.mongo.Collection[Model2] {
+  class Model2s(model1s: => Model1s) extends Collection[Model2] {
     override val collection: BSONCollection = db[BSONCollection]("model2s")
 
     override def relations = Seq(model1s)

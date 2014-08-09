@@ -1,5 +1,6 @@
 package models
 
+import lib.mongo.Mongo
 import org.junit.runner._
 import org.specs2.mutable._
 import org.specs2.runner._
@@ -9,7 +10,7 @@ import org.specs2.runner._
  */
 
 @RunWith(classOf[JUnitRunner])
-class UserSpec extends Specification with lib.Mongo with lib.Util {
+class UserSpec extends Specification with Mongo with lib.Util {
 
   sequential
 
