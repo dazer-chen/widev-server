@@ -13,6 +13,7 @@ import lib.util.Implicits.BSONDateTimeHandler
  * Created by trupin on 7/26/14.
  */
 case class AuthCode(
+                     _id: BSONObjectID = BSONObjectID.generate,
                      authorizationCode: String,
                      userId: BSONObjectID,
                      clientId: BSONObjectID,
@@ -41,10 +42,12 @@ case class AuthCodes(db: DefaultDB) extends Collection[AuthCode] {
   def generate = AuthCode(
     authorizationCode = BSONObjectID.generate.stringify,
     userId = BSONObjectID.generate,
-    clientId = BSONObjectID.generate
+    clientId = BSONObjectID.generate,
+    redirectUri = Some(BSONObjectID.generate.stringify),
+    scope = Some(BSONObjectID.generate.stringify)
   )
 
-  def find(code: String)(implicit ec: ExecutionContext): Future[Option[AuthCode]] =
+  def findValidByCode(code: String)(implicit ec: ExecutionContext): Future[Option[AuthCode]] =
     collection.find(BSONDocument(
       "authorizationCode" -> code,
       "expiresAt" -> BSONDocument("$gte" -> DateTime.now)

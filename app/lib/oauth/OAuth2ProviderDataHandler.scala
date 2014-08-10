@@ -49,7 +49,7 @@ case class OAuth2ProviderDataHandler(
     createAccessToken(authInfo)
 
   def findAuthInfoByCode(code: String): Option[AuthInfo[User]] =
-    Await.result(authCodes.find(code).flatMap {
+    Await.result(authCodes.findValidByCode(code).flatMap {
       case Some(authCode) => users.find(authCode.clientId).map {
         case Some(user) =>
           Some(AuthInfo(
