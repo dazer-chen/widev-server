@@ -25,13 +25,8 @@ case class Session(_id: BSONObjectID = BSONObjectID.generate,
                    createdAt: DateTime = DateTime.now)
 
 object Session {
-
   import lib.util.Implicits.BSONDateTimeHandler
   implicit val handler = Macros.handler[Session]
-
-  def cleanExpiredTokens = {
-
-  }
 }
 
 case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigImpl {
@@ -60,18 +55,17 @@ case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigIm
 //    Index(List("createdAt" -> IndexType.Ascending))
 //  )
 
-//  createAt > DateTime.now - x second
 
-
-  def cleanExpiredTokens(): Future[LastError] = {
+  def cleanExpiredTokens(timeout: Option[Int]): Future[LastError] = {
     collection.remove(BSONDocument(
       "createdAt" ->
-        BSONDocument("$lt" -> BSONDateTimeHandler.write(DateTime.now.minusSeconds(sessionTimeoutInSeconds)))
+        BSONDocument("$lt" -> BSONDateTimeHandler.write(
+        timeout match {
+          case Some(seconds) => DateTime.now.minusSeconds(seconds)
+          case None => DateTime.now.minusSeconds(sessionTimeoutInSeconds)
+        }
+          ))
     ))
-  }
-
-  def create(session: Session): Future[Session] = {
-    collection.insert[Session](session).map { _ => session }
   }
 
   def findByToken(token: String): Future[Option[Session]] = {
@@ -79,20 +73,14 @@ case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigIm
     collection.find(query).one[Session]
   }
 
-  def updateCreateAt(id: BSONObjectID): Future[LastError] = {
-    def modifier = BSONDocument(
-      "$set" -> BSONDocument(
-        "createAt" -> BSONDateTime(new DateTime().getMillis)
-      )
-    )
-
-    collection.update(BSONDocument("_id" -> id), modifier)
-  }
-
   def refreshToken(token: String): Future[Option[Session]] = {
     findByToken(token).flatMap {
       case Some(session) => {
-        updateCreateAt(session._id).map { _ => Some(session) }
+        val new_session = session.copy(createdAt = DateTime.now)
+        update(new_session).map {
+          case true => Some(new_session)
+          case false => None
+        }
       }
       case _ => Future(None)
     }
