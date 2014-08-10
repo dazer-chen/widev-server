@@ -64,7 +64,7 @@ case class OAuth2ProviderDataHandler(
     }, timeout)
 
   def findAuthInfoByRefreshToken(refreshToken: String): Option[AuthInfo[User]] =
-    Await.result(accessTokens.findRefreshToken(refreshToken).flatMap {
+    Await.result(accessTokens.findByRefreshToken(refreshToken).flatMap {
       case Some(accessToken) =>
         users.find(accessToken.userId).map {
           case Some(user) => Some(AuthInfo(
@@ -91,13 +91,13 @@ case class OAuth2ProviderDataHandler(
     }, timeout)
 
   def findAccessToken(token: String): Option[AccessToken] =
-    Await.result(accessTokens.findByToken(token).map {
+    Await.result(accessTokens.findByAccessToken(token).map {
       case Some(accessToken) => Some(models.AccessToken.convert(accessToken))
       case _ => None
     }, timeout)
 
   def findAuthInfoByAccessToken(accessToken: AccessToken): Option[AuthInfo[User]] =
-    Await.result(accessTokens.findByToken(accessToken.token).flatMap {
+    Await.result(accessTokens.findByAccessToken(accessToken.token).flatMap {
       case Some(a) => users.find(a.userId).map {
         case Some(user) => Some(AuthInfo(
           user = user,

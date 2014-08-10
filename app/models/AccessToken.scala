@@ -1,17 +1,18 @@
 package models
 
-import lib.mongo.{SuperCollection, CannotEnsureRelation, Collection}
+import lib.mongo.Collection
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.ExecutionContext
 
 /**
  * Created by trupin on 7/26/14.
  */
 case class AccessToken(
+                        _id: BSONObjectID = BSONObjectID.generate,
                         accessToken: String,
                         userId: BSONObjectID,
                         clientId: BSONObjectID,
@@ -50,7 +51,9 @@ case class AccessTokens(db: DefaultDB) extends Collection[AccessToken] {
   def generate = AccessToken(
     accessToken = BSONObjectID.generate.stringify,
     userId = BSONObjectID.generate,
-    clientId = BSONObjectID.generate
+    clientId = BSONObjectID.generate,
+    refreshToken = Some(BSONObjectID.generate.stringify),
+    scope = Some(BSONObjectID.generate.stringify)
   )
 
   def find(userId: BSONObjectID, clientId: BSONObjectID)(implicit ec: ExecutionContext) =
@@ -61,15 +64,15 @@ case class AccessTokens(db: DefaultDB) extends Collection[AccessToken] {
       _ => collection.insert(accessToken)
     }
 
-  def findRefreshToken(token: String)(implicit ec: ExecutionContext) =
+  def findByRefreshToken(token: String)(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("refreshToken" -> token)).one[AccessToken]
 
-  def findByToken(token: String)(implicit ec: ExecutionContext) =
+  def findByAccessToken(token: String)(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("accessToken" -> token)).one[AccessToken]
 
   def find(clientId: BSONObjectID, scope: Option[String])(implicit ec: ExecutionContext) =
     collection.find(BSONDocument("clientId" -> clientId) ++ (
-      if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument()
-      )).one[AccessToken]
+      if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument("scope" -> BSONDocument( "$exists" -> false ))
+    )).one[AccessToken]
 
 }

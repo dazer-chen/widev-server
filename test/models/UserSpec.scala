@@ -14,11 +14,21 @@ class UserSpec extends Specification with Mongo with lib.Util {
 
   sequential
 
-//  "User" should {
-//    ".create" >> {
-//      val user = factory.users.user
-//      result(factory.users.create(user)) must be(user)
-//    }
-//
-//  }
+  val users = factory.users
+
+  "User" should {
+    "relations" >> {
+      users.relations should beEmpty
+    }
+
+    ".find" >> {
+      val user = users.generate
+      result(users.create(user))
+
+      "with username and password" >> {
+        result(users.find(user.username, user.password)).get should equalTo(user)
+      }
+    }
+
+  }
 }
