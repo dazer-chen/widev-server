@@ -25,15 +25,17 @@ class AuthCodeSpec extends Specification with Mongo with lib.Util {
     }
 
     ".find" >> {
-      val expiredAuthCode = authCodes.generate.copy(expiresAt = DateTime.now.minusHours(1))
-      val validAuthCode = authCodes.generate
-
-      result(authCodes.create(expiredAuthCode))
-      result(authCodes.create(validAuthCode))
-
       "valid by code" >> {
-        result(authCodes.findValidByCode(expiredAuthCode.authorizationCode)) should beEmpty
-        result(authCodes.findValidByCode(validAuthCode.authorizationCode)) should beEmpty
+        "with expired auth code" >> {
+          val expiredAuthCode = authCodes.generate.copy(expiresAt = DateTime.now.minusHours(1))
+          result(authCodes.create(expiredAuthCode))
+          result(authCodes.findValidByCode(expiredAuthCode.authorizationCode)) should beEmpty
+        }
+        "with valid auth code" >> {
+          val validAuthCode = authCodes.generate
+          result(authCodes.create(validAuthCode))
+          result(authCodes.findValidByCode(validAuthCode.authorizationCode)) should equalTo(Some(validAuthCode))
+        }
       }
     }
   }
