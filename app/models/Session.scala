@@ -1,6 +1,7 @@
 package models
 
-import lib.mongo.Collection
+import lib.mongo.{SuperCollection, Collection}
+import lib.util.BearerTokenGenerator
 import lib.util.Implicits.BSONDateTimeHandler
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
@@ -33,9 +34,16 @@ object Session {
   }
 }
 
-case class Sessions(db: DefaultDB) extends Collection with AuthConfigImpl {
+case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigImpl {
 
   val collection = db.collection[BSONCollection]("session")
+
+  def relations: Seq[SuperCollection] = Seq.empty
+
+  def generate: Session = Session(
+    token = BearerTokenGenerator.generateToken,
+    userId = BSONObjectID.generate
+  )
 
 //  def commandExpireData(db: DefaultDB): Future[BSONDocument] = {
 //    val command = BSONDocument(

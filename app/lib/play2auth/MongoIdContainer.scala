@@ -1,41 +1,20 @@
 package lib.play2auth
 
-import java.awt.Container
-import java.security.SecureRandom
-
 import jp.t2v.lab.play2.auth._
+import lib.util.BearerTokenGenerator
 import models.{Session, Sessions}
 import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 
-import scala.annotation.tailrec
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 import scala.reflect.ClassTag
-import reflect.ClassTag
-
-import play.api.libs.concurrent.Execution.Implicits._
 
 
 /**
  * Created by gaetansenn on 06/08/2014.
  */
-
-object BearerTokenGenerator {
-
-  val TOKEN_LENGTH = 32
-  val TOKEN_CHARS =
-    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._"
-  val secureRandom = new SecureRandom()
-
-  def generateToken:String =
-    generateToken(TOKEN_LENGTH)
-
-  def generateToken(tokenLength: Int): String =
-    if(tokenLength == 0) "" else TOKEN_CHARS(secureRandom.nextInt(TOKEN_CHARS.length())) +
-      generateToken(tokenLength - 1)
-
-}
 
 //Only support string for the moment
 class MongoIdContainer[Id: ClassTag] extends IdContainer[Id] {
