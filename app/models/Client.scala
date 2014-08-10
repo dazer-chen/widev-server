@@ -3,7 +3,7 @@ package models
 import lib.mongo.{SuperCollection, Collection}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
+import reactivemongo.bson.{BSONArray, BSONDocument, BSONObjectID, Macros}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,10 +27,15 @@ case class Clients(db: DefaultDB) extends Collection[Client] {
 
   def relations: Seq[SuperCollection] = Seq.empty
 
-  def generate: Client = Client()
+  def generate: Client = Client(
+    secret = Some(BSONObjectID.generate.stringify),
+    redirectUri = Some(BSONObjectID.generate.stringify),
+    scope = Some(BSONObjectID.generate.stringify),
+    grantTypes = List(AuthorizationCodeGrandType, ImplicitGrandType)
+  )
 
   def validate(id: BSONObjectID, secret: String, grandType: GrandType)(implicit ec: ExecutionContext): Future[Boolean] =
-    collection.find(BSONDocument("_id" -> id, "secret" -> secret, "grandType" -> grandType.value)).one[Client].map {
+    collection.find(BSONDocument("_id" -> id, "secret" -> secret, "grantTypes" -> grandType.value)).one[Client].map {
       case Some(_) => true
       case _ => false
     }
