@@ -1,7 +1,7 @@
 package controllers
 
 import controllers.Application._
-import jp.t2v.lab.play2.auth.AuthElement
+import jp.t2v.lab.play2.auth.{LoginLogout, AuthElement}
 import lib.oauth.GithubOauth2
 import models.{Users, JsonError, JsonFormat}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -16,7 +16,7 @@ import scala.concurrent.Future
 /**
  * Created by gaetansenn on 26/07/2014.
  */
-object Authentication extends Controller with MongoController with AuthElement with AuthConfigImpl {
+object Authentication extends Controller with MongoController with LoginLogout with AuthConfigImpl {
 
   def users = Users(db)
 
@@ -47,6 +47,13 @@ object Authentication extends Controller with MongoController with AuthElement w
     }
   }
 
+  def FakeAuthenticate = Action.async { implicit request =>
+    users.find("ridertahiti", "ridertahiti").flatMap {
+      case Some(u) => gotoLoginSucceeded(u._id.stringify)
+      case _ => Future.successful(Ok("No user like that madafakaa"))
+    }
+  }
+
   //  Basic authentication method
   def authenticate = Action.async(BodyParsers.parse.json) { implicit request =>
 
@@ -70,9 +77,4 @@ object Authentication extends Controller with MongoController with AuthElement w
       }
     )
   }
-
-  def AuthenticateTest = StackAction { response =>
-    Ok("ok")
-  }
-
 }

@@ -1,6 +1,7 @@
 package controllers
 
-import jp.t2v.lab.play2.auth.AuthConfig
+import jp.t2v.lab.play2.auth.{AuthConfig, IdContainer}
+import lib.play2auth.MongoIdContainer
 import models._
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -62,9 +63,7 @@ trait AuthConfigImpl extends AuthConfig with Results {
   def resolveUser(id: Id)(implicit context: ExecutionContext): Future[Option[User]] = {
     def db = ReactiveMongoPlugin.db
     Users(db).find(BSONObjectID(id)).map {
-      res =>
-        println(s"-------> $res")
-        res
+      res => res
     }
   }
 
@@ -100,7 +99,14 @@ trait AuthConfigImpl extends AuthConfig with Results {
     (user.permission, authority) match {
       case (Administrator, _)       => true
       case (Authenticated, Authenticated) => true
+      case (Visitor, Visitor)       => true
       case _                        => false
     }
   }
+
+  override lazy val cookieSecureOption: Boolean = play.api.Play.isProd(play.api.Play.current)
+
+  override lazy val idContainer: IdContainer[Id] = new MongoIdContainer[Id]
+
+
 }
