@@ -55,7 +55,6 @@ case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigIm
 //    Index(List("createdAt" -> IndexType.Ascending))
 //  )
 
-
   def cleanExpiredTokens(timeout: Option[Int]): Future[LastError] = {
     collection.remove(BSONDocument(
       "createdAt" ->

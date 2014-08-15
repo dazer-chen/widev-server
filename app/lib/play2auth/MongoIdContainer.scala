@@ -15,12 +15,12 @@ import scala.reflect.ClassTag
 /**
  * Created by gaetansenn on 06/08/2014.
  */
+object MongoIdContainer {
+  lazy val sessions = Sessions(ReactiveMongoPlugin.db)
+}
 
 //Only support string for the moment
-class MongoIdContainer[Id: ClassTag] extends IdContainer[Id] {
-
-  implicit def db = ReactiveMongoPlugin.db
-  lazy val sessions = Sessions(db)
+class MongoIdContainer[Id: ClassTag](sessions: Sessions = MongoIdContainer.sessions) extends IdContainer[Id] {
 
   def startNewSession(userId: Id, timeoutInSeconds: Int): AuthenticityToken = {
     val token = BearerTokenGenerator.generateToken

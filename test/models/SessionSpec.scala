@@ -1,6 +1,7 @@
 package models
 
 import lib.mongo.Mongo
+import org.joda.time.DateTime
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -73,9 +74,8 @@ class SessionSpec extends Specification with Mongo with lib.Util {
     "util" >> {
 
       "expired token with specific timeout should be cleaned properly " >> {
-        val session = sessions.generate
+        val session = sessions.generate.copy(createdAt = DateTime.now.minusSeconds(2) )
         result(sessions.create(session))
-        Thread.sleep(2000)
         result(sessions.cleanExpiredTokens(Some(1)))
         result[Option[Session]](sessions.findByToken(session.token)) should none
       }
