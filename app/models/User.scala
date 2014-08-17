@@ -37,6 +37,12 @@ object User {
     )
   }
 
+  def generate = User(
+    email = BSONObjectID.generate.stringify,
+    username = BSONObjectID.generate.stringify,
+    password = BSONObjectID.generate.stringify
+  )
+
 }
 
 case class Users(db: DefaultDB) extends Collection[User] {
@@ -44,11 +50,7 @@ case class Users(db: DefaultDB) extends Collection[User] {
 
   def relations: Seq[SuperCollection] = Seq.empty
 
-  def generate: User = User(
-    email = BSONObjectID.generate.stringify,
-    username = BSONObjectID.generate.stringify,
-    password = BSONObjectID.generate.stringify
-  )
+  def generate: User = User.generate
 
   def find(username: String, password: String)(implicit ec: ExecutionContext): Future[Option[User]] =
     collection.find(BSONDocument("username" -> username, "password" -> password)).one[User]

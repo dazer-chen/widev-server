@@ -34,12 +34,12 @@ class SessionSpec extends Specification with Mongo with lib.Util {
       val session = sessions.generate
 
       "refreshToken without session in database" >> {
-        result[Option[Session]](sessions.refreshToken(session.token)) should none
+        result[Option[Session]](sessions.refreshToken(session.token, 0)) should none
       }
 
       "refreshToken with session in database" >> {
         result(sessions.create(session))
-        result[Option[Session]](sessions.refreshToken(session.token)) should beSome[Session]
+        result[Option[Session]](sessions.refreshToken(session.token, 20)) should beSome[Session]
         result[Option[Session]](sessions.findByToken(session.token)).get.createdAt.getMillis must beGreaterThan(session.createdAt.getMillis)
       }
 

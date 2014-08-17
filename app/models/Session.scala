@@ -27,6 +27,11 @@ case class Session(_id: BSONObjectID = BSONObjectID.generate,
 object Session {
   import lib.util.Implicits.BSONDateTimeHandler
   implicit val handler = Macros.handler[Session]
+
+  def generate: Session = Session(
+    token = BearerTokenGenerator.generateToken,
+    userId = BSONObjectID.generate
+  )
 }
 
 case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigImpl {
@@ -35,10 +40,7 @@ case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigIm
 
   def relations: Seq[SuperCollection] = Seq.empty
 
-  def generate: Session = Session(
-    token = BearerTokenGenerator.generateToken,
-    userId = BSONObjectID.generate
-  )
+  def generate: Session = Session.generate
 
 //  def commandExpireData(db: DefaultDB): Future[BSONDocument] = {
 //    val command = BSONDocument(
@@ -72,10 +74,10 @@ case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigIm
     collection.find(query).one[Session]
   }
 
-  def refreshToken(token: String): Future[Option[Session]] = {
+  def refreshToken(token: String, timeoutInSeconds: Int): Future[Option[Session]] = {
     findByToken(token).flatMap {
       case Some(session) => {
-        val new_session = session.copy(createdAt = DateTime.now)
+        val new_session = session.copy(createdAt = session.createdAt.plusSeconds(timeoutInSeconds))
         update(new_session).map {
           case true => Some(new_session)
           case false => None
@@ -89,6 +91,6 @@ case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigIm
     collection.remove(BSONDocument("token" -> token))
 
   def removeByUser(user: BSONObjectID): Future[LastError] =
-  collection.remove(BSONDocument("userId" -> user))
+    collection.remove(BSONDocument("userId" -> user))
 
 }

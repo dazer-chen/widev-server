@@ -32,8 +32,7 @@ class MongoIdContainer[Id: ClassTag](sessions: Sessions = MongoIdContainer.sessi
     sessions.removeByUser(user)
     val session = sessions.create(Session(token = token, userId = user))
     import scala.concurrent.duration._
-    Await.result(session, 10.second)
-    token
+    Await.result(session, 10.second).token
   }
 
   def remove(token: AuthenticityToken): Unit = {
@@ -50,7 +49,7 @@ class MongoIdContainer[Id: ClassTag](sessions: Sessions = MongoIdContainer.sessi
   }
 
   def prolongTimeout(token: AuthenticityToken, timeoutInSeconds: Int): Unit = {
-    val update = sessions.refreshToken(token)
+    val update = sessions.refreshToken(token, timeoutInSeconds)
     import scala.concurrent.duration._
     Await.result(update, 10.second)
 

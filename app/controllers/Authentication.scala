@@ -1,24 +1,28 @@
 package controllers
 
-import controllers.Application._
-import jp.t2v.lab.play2.auth.{LoginLogout, AuthElement}
+import jp.t2v.lab.play2.auth.LoginLogout
 import lib.oauth.GithubOauth2
-import models.{Users, JsonError, JsonFormat}
+import models.{JsonError, JsonFormat, Users}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsError, JsPath, Reads, Json}
-import play.api.mvc._
-import play.modules.reactivemongo.MongoController
-import reactivemongo.api.collections.default.BSONCollection
+import play.api.Play.current
 import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsError, JsPath, Json, Reads}
+import play.api.mvc._
+import play.modules.reactivemongo.{MongoController, ReactiveMongoPlugin}
 
 import scala.concurrent.Future
 
 /**
  * Created by gaetansenn on 26/07/2014.
  */
-object Authentication extends Controller with MongoController with LoginLogout with AuthConfigImpl {
 
-  def users = Users(db)
+object UserFactory {
+  lazy val users = Users(ReactiveMongoPlugin.db)
+}
+
+class Authentication(users: Users) extends Controller with MongoController with LoginLogout {
+
+  self: AuthConfigImpl =>
 
   def githubSigning = Action {
     Redirect(GithubOauth2.signIn())
@@ -55,7 +59,7 @@ object Authentication extends Controller with MongoController with LoginLogout w
   }
 
   //  Basic authentication method
-  def authenticate = Action.async(BodyParsers.parse.json) { implicit request =>
+  def Authenticate() = Action.async(BodyParsers.parse.json) { implicit request =>
 
     case class UserLogin(login : String, password: String)
 
@@ -71,10 +75,14 @@ object Authentication extends Controller with MongoController with LoginLogout w
       },
       login => {
         users.find(login.login, login.password).flatMap {
-          case Some(u) => gotoLoginSucceeded(u._id.toString())
+          case Some(u) => {
+            gotoLoginSucceeded(u._id.toString())
+          }
           case _ => Future.successful(BadRequest(Json.obj("status" -> "KO", "message" -> "login or passoword incorect")))
         }
       }
     )
   }
 }
+
+object Authentication extends Authentication(UserFactory.users) with AuthConfigImpl
