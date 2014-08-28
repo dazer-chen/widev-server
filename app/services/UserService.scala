@@ -15,4 +15,4 @@ class UserService(users: Users) {
   def find(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[User]] = users.find(id)
 }
 
-object UserService extends UserService(new Users(ReactiveMongoPlugin.db))
+object UserService extends UserService(Users(ReactiveMongoPlugin.db))

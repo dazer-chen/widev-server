@@ -24,7 +24,7 @@ class UserControllerSpec extends Specification with Mockito with Util {
 
       val userServiceMock = mock[UserService]
 
-      userServiceMock.find(user._id)(any[ExecutionContext]) returns Future(Some(user))
+      userServiceMock.find(user._id)(concurrentExecutionContext) returns Future(Some(user))
 
       val userController = new UserController() with AuthConfigExtends
 
