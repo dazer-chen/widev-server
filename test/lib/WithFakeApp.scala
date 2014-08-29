@@ -18,7 +18,7 @@ case class WithFakeApp() extends WithApplication(FakeApplication(withoutPlugins 
 
 trait FakeSession extends Scope with Mockito with AuthConfigMocked {
   def permission: Permission
-  val user = User.generate
+  lazy val user = User.generate.copy(permission = permission)
 
   val containerMock = mock[IdContainer[Id]]
   containerMock.get(any[String]) returns Some(user._id.stringify)
