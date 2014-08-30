@@ -19,7 +19,7 @@ case class User(
                  firstName: Option[String] = None,
                  lastName: Option[String] = None,
                  gitHub: Option[String] = None,
-                 permission: Permission = Visitor,
+                 permission: Permission = Standard,
                  _id: BSONObjectID = BSONObjectID.generate
                  )
 
@@ -29,6 +29,7 @@ object User {
   //Json write Handler
   implicit val UserWrites = new Writes[User] {
     def writes(model: User) = Json.obj(
+      "_id" -> model._id.stringify,
       "email" -> model.email,
       "username" -> model.username,
       "password" -> model.password,

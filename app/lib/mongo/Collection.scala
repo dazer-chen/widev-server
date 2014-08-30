@@ -9,11 +9,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 /**
  * Created by trupin on 7/27/14.
  */
-sealed abstract class CollectionException(message: String) extends RuntimeException(message)
-
-case class CannotEnsureRelation(collection: String) extends CollectionException(s"'$collection': Cannot ensure relation between collections.")
-case class InvalidModel(message: String) extends CollectionException(message)
-
 trait SuperCollection {
 
   val collection: BSONCollection

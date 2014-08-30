@@ -97,16 +97,14 @@ trait AuthConfigImpl extends AuthConfig with Results {
    */
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {
     (user.permission, authority) match {
-      case (Administrator, _)       => true
-      case (Authenticated, Authenticated) => true
-      case (Visitor, Visitor)       => true
-      case _                        => false
+      case (Administrator, _) => true
+      case (p, a) if p.value <= a.value => true
+      case _ => false
     }
   }
 
   override lazy val cookieSecureOption: Boolean = play.api.Play.isProd(play.api.Play.current)
 
   override lazy val idContainer: IdContainer[Id] = new MongoIdContainer[Id]
-
 
 }

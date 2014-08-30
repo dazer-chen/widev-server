@@ -21,10 +21,6 @@ object Migrations {
 
   implicit val handler = Macros.handler[AppliedMigration]
 
-  private val objs: Seq[db.Migration] = Seq(
-    M1_AddIndexesForUsersCollection
-  )
-
   def run(db: DefaultDB)(implicit ec: ExecutionContext): Future[Seq[AppliedMigration]] = {
     implicit val migrations = db.collection[BSONCollection]("migrations")
 
@@ -34,9 +30,9 @@ object Migrations {
       case Some(lastMigration) if lastMigration.createdAt.isBefore(DateTime.now) =>
         throw new DbAlreadyUpToDate
       case Some(lastMigration) =>
-        runMigrations(objs.splitAt(lastMigration.index)._2, db)
+        runMigrations(MigrationRecords.migrations.splitAt(lastMigration.index)._2, db)
       case None =>
-        runMigrations(objs, db)
+        runMigrations(MigrationRecords.migrations, db)
     }.flatMap(_.find(BSONDocument()).sort(BSONDocument("$natural" -> true)).cursor[AppliedMigration].collect[Seq]())
   }
 

@@ -17,13 +17,12 @@ GET     /github/signin                      controllers.Authentication.githubSig
 GET     /github/authentication/success      controllers.Authentication.success(token_session: String)
 GET     /github/authentication/fail         controllers.Authentication.fail(token_session: String)
 
-
 # OAuth2 provider
 POST    /oauth2/access_token                controllers.OAuth2ProviderController.accessToken
 
 # Authentification routes
 POST    /authenticate                       controllers.Authentication.Authenticate
-GET     /test                               controllers.Application.AuthenticateTest
 
 #User Module
-GET     /user/:id                           controllers.UserController.getUser(id: String)
+GET     /users/:id                          controllers.UserController.getUser(id: String)
+POST    /users                              controllers.UserController.createUser(email: String, password: String, username: String)
