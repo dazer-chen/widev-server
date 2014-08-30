@@ -23,7 +23,6 @@ POST    /oauth2/access_token                controllers.OAuth2ProviderController
 
 # Authentification routes
 POST    /authenticate                       controllers.Authentication.Authenticate
-GET     /fakeauthenficate                   controllers.Authentication.FakeAuthenticate
 GET     /test                               controllers.Application.AuthenticateTest
 
 #User Module

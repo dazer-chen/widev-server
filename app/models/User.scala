@@ -13,14 +13,14 @@ import scala.concurrent.{ExecutionContext, Future}
  */
 
 case class User(
-                 _id: BSONObjectID = BSONObjectID.generate,
                  email: String,
                  username: String,
                  password: String,
                  firstName: Option[String] = None,
                  lastName: Option[String] = None,
                  gitHub: Option[String] = None,
-                 permission: Permission = Visitor
+                 permission: Permission = Visitor,
+                 _id: BSONObjectID = BSONObjectID.generate
                  )
 
 object User {

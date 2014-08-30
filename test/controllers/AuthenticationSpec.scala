@@ -42,7 +42,7 @@ class AuthenticationSpec extends Specification with Mockito with Util {
 
   "AuthenticationSpec" should {
 
-    "Should redirect to success when authentication success" >> WithFakeApp() {
+    "Should redirect to success when authentication success" >> new WithFakeApp {
       val userMock = mock[Users]
       val user = User.generate
 
@@ -56,7 +56,7 @@ class AuthenticationSpec extends Specification with Mockito with Util {
 
     }
 
-    "Should return a 400 when authentication fail" >> WithFakeApp() {
+    "Should return a 400 when authentication fail" >> new WithFakeApp {
       val userMock = mock[Users]
       val user = User.generate
 

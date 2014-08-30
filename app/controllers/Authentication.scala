@@ -51,13 +51,6 @@ class Authentication(users: Users) extends Controller with MongoController with 
     }
   }
 
-  def FakeAuthenticate = Action.async { implicit request =>
-    users.find("ridertahiti", "ridertahiti").flatMap {
-      case Some(u) => gotoLoginSucceeded(u._id.stringify)
-      case _ => Future.successful(Ok("No user like that madafakaa"))
-    }
-  }
-
   //  Basic authentication method
   def Authenticate() = Action.async(BodyParsers.parse.json) { implicit request =>
 
@@ -78,7 +71,7 @@ class Authentication(users: Users) extends Controller with MongoController with 
           case Some(u) => {
             gotoLoginSucceeded(u._id.toString())
           }
-          case _ => Future.successful(BadRequest(Json.obj("status" -> "KO", "message" -> "login or passoword incorect")))
+          case _ => Future.successful(BadRequest(Json.obj("status" -> "KO", "message" -> "unknown login or password")))
         }
       }
     )

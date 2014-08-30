@@ -1,62 +1,64 @@
 package controllers
 
-import lib.{FakeSession, Util, WithFakeApp}
-import models.{Authenticated, Permission}
-import org.junit.runner.RunWith
-import org.mockito.Mockito._
+import lib.{Util, WithFakeSessionApp}
+import models._
+import org.specs2._
 import org.specs2.mock.Mockito
-import org.specs2.mutable.Specification
-import org.specs2.runner.JUnitRunner
+import org.specs2.specification.Scope
 import play.api.libs.json.Json
 import play.api.test.Helpers._
-import reactivemongo.bson.BSONObjectID
-import services.UserService
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 /**
  * Created by gaetansenn on 17/08/2014.
  */
 
-@RunWith(classOf[JUnitRunner])
-class UserControllerSpec extends Specification with Mockito with Util {
+class UserControllerSpec extends mutable.Specification with Mockito with Util {
+
+  trait MockFactory extends Scope {
+    self: WithFakeSessionApp =>
+
+    val usersMock = mock[Users]
+    val userController = new UserController(usersMock) with AuthConfigExtends
+  }
 
   "UserController" should {
-    "getUser should return a json UserModel" >> new WithFakeApp with FakeSession {
-      def permission: Permission = Authenticated
+    ".getUser" >> {
+      "should return a json UserModel" >> new WithFakeSessionApp(Authenticated) with MockFactory {
+        usersMock.find(currentUser._id) returns Future(Some(currentUser))
 
-      val userServiceMock = mock[UserService]
+        val result = userController.getUser(currentUser._id.stringify)(fakeRequest)
 
-      userServiceMock.find(any[BSONObjectID])(any[ExecutionContext]) returns Future(Some(user))
+        contentType(result) must equalTo(Some("application/json"))
 
-      val userController = new UserController(userServiceMock) with AuthConfigExtends
+        contentAsString(result) must beEqualTo(Json.toJson(currentUser).toString())
 
-      val result = userController.getUser(user._id.stringify)(fakeRequest)
+        there was one(usersMock).find(currentUser._id)
+      }
 
-      contentType(result) must equalTo(Some("application/json"))
-
-      contentAsString(result) must beEqualTo(Json.toJson(user).toString())
-
-      //Not working why i don't really know
-      there was one(userServiceMock).find(BSONObjectID.generate)(concurrentExecutionContext)
+//      "without a good id should return a bad access" >> new WithFakeSessionApp(Authenticated) with MockFactory {
+//        usersMock.find(any[BSONObjectID]) returns Future(None)
+//
+//        val result = userController.getUser(currentUser._id.stringify)(fakeRequest)
+//
+//        contentType(result) must equalTo(Some("text/plain"))
+//
+//        status(result) must equalTo(NOT_FOUND)
+//
+//        there was one(usersMock).find(currentUser._id)
+//      }
     }
 
-    "getUser without a good id should return a bad access" >> new WithFakeApp with FakeSession {
-      def permission: Permission = Authenticated
+//    ".createUser" >> {
+//      "should return a json UserModel" >> new WithFakeSessionApp(Visitor) with MockFactory {
+//        val fakeUser = User.generate
+//
+//        usersMock.create(any[User]) returns Future(fakeUser)
+//
+//        val result = userController
+//      }
+//    }
 
-      val userServiceMock = mock[UserService]
-
-      userServiceMock.find(any[BSONObjectID])(any[ExecutionContext]) returns Future(None)
-
-
-      val userController = new UserController(userServiceMock) with AuthConfigExtends
-
-      val result = userController.getUser(user._id.stringify)(fakeRequest)
-
-      contentType(result) must equalTo(Some("text/plain"))
-
-      status(result) must equalTo(NOT_FOUND)
-
-    }
   }
 }

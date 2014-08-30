@@ -3,7 +3,8 @@ package lib.mongo
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Created by trupin on 7/27/14.
@@ -28,18 +29,18 @@ trait SuperCollection {
   /**
    * Checks if a model exists.
    */
-  def exists(field: String, value: BSONValue)(implicit ec: ExecutionContext): Future[Boolean] =
+  def exists(field: String, value: BSONValue): Future[Boolean] =
     collection.find(BSONDocument(field -> value), BSONDocument(field -> true)).one[BSONDocument].map {
       case Some(_) => true
       case _ => false
     }
 
-  def exists(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Boolean] = exists("_id", id)
+  def exists(id: BSONObjectID): Future[Boolean] = exists("_id", id)
 
   /**
    * Inserts a model.
    */
-  private[mongo] def createDocument(document: BSONDocument)(implicit ec: ExecutionContext): Future[BSONDocument] =
+  private[mongo] def createDocument(document: BSONDocument): Future[BSONDocument] =
     collection.insert(document).map { _ => document }
 
   /**
@@ -47,7 +48,7 @@ trait SuperCollection {
    *
    * @param document model to insert
    */
-  private[mongo] def deepCreateDocument(document: BSONDocument)(parents: Set[String] = Set.empty)(implicit ec: ExecutionContext): Future[BSONDocument] = {
+  private[mongo] def deepCreateDocument(document: BSONDocument)(parents: Set[String] = Set.empty): Future[BSONDocument] = {
     if (parents.contains(collection.name))
       createDocument(document)
     else
@@ -66,7 +67,7 @@ trait SuperCollection {
    *
    * @param id model's id
    */
-  def delete(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Boolean] =
+  def delete(id: BSONObjectID): Future[Boolean] =
     collection.remove(BSONDocument("_id" -> id)).map {
       case res if res.n > 0 => true
       case _ => false
@@ -75,16 +76,16 @@ trait SuperCollection {
   /**
    * Recursively deletes a model and all its _relations.
    */
-  private[mongo] def deepDeleteFromDocument(document: BSONDocument)(implicit ec: ExecutionContext): Future[Boolean] =
+  private[mongo] def deepDeleteFromDocument(document: BSONDocument): Future[Boolean] =
     deepDeleteInternalFromDocument(document)(Set.empty)
 
-  def deepDelete(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Boolean] =
+  def deepDelete(id: BSONObjectID): Future[Boolean] =
     if (_relations.size > 0)
       deepDeleteInternal(id)(Set.empty)
     else
       delete(id)
 
-  private[mongo] def deepDeleteInternalFromDocument(document: BSONDocument)(parents: Set[String] = Set.empty)(implicit ec: ExecutionContext): Future[Boolean] = {
+  private[mongo] def deepDeleteInternalFromDocument(document: BSONDocument)(parents: Set[String] = Set.empty): Future[Boolean] = {
     if (!parents.contains(collection.name)) {
       Future.sequence(_relations.map {
         case c =>
@@ -101,7 +102,7 @@ trait SuperCollection {
       delete(getIdFromDocument("_id", document))
   }
 
-  private[mongo] def deepDeleteInternal(id: BSONObjectID)(parents: Set[String])(implicit ec: ExecutionContext): Future[Boolean] =
+  private[mongo] def deepDeleteInternal(id: BSONObjectID)(parents: Set[String]): Future[Boolean] =
     findDocument(id).flatMap {
       case Some(res) => deepDeleteInternalFromDocument(res)(parents)
       case _ => Future(false)
@@ -113,7 +114,7 @@ trait SuperCollection {
    * @param id model's id
    * @return true if at least one element has been deleted
    */
-  private[mongo] def findDocument(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[BSONDocument]] = collection.find(BSONDocument("_id" -> id)).one[BSONDocument]
+  private[mongo] def findDocument(id: BSONObjectID): Future[Option[BSONDocument]] = collection.find(BSONDocument("_id" -> id)).one[BSONDocument]
 
   private[mongo] def collectionNameToIdName(name: String) = {
     val n = name.split("-").map(s => s.substring(0, 1).capitalize + s.substring(1)).mkString.replace("s$", "")
@@ -139,7 +140,7 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
    *
    * @param model model to insert
    */
-  def deepCreate(model: M)(implicit ec: ExecutionContext): Future[M] = {
+  def deepCreate(model: M): Future[M] = {
     val document = writer.write(model)
     deepCreateDocument(document)(Set.empty).map(reader.read)
   }
@@ -149,7 +150,7 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
    *
    * @param model model to insert
    */
-  def safeCreate(model: M)(implicit ec: ExecutionContext): Future[Boolean] = {
+  def safeCreate(model: M): Future[Boolean] = {
     val document = writer.write(model)
     Future.sequence(_relations.map {
       case c =>
@@ -170,7 +171,7 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
    *
    * @param id model's id
    */
-  def find(id: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[M]] =
+  def find(id: BSONObjectID): Future[Option[M]] =
     findDocument(id).map {
       case Some(res) => Some(reader.read(res))
       case _ => None
@@ -181,7 +182,7 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
    *
    * @param model to insert
    */
-  def create(model: M)(implicit ec: ExecutionContext): Future[M] =
+  def create(model: M): Future[M] =
     createDocument(writer.write(model)).map(reader.read)
 
   /**
@@ -189,10 +190,10 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
    *
    * @param model model to save
    */
-  def save(model: M)(implicit ec: ExecutionContext): Future[M] =
+  def save(model: M): Future[M] =
     collection.save(model).map { _ => model }
 
-  def safeSave(model: M)(implicit ec: ExecutionContext): Future[Boolean] = {
+  def safeSave(model: M): Future[Boolean] = {
     val document = writer.write(model)
     Future.sequence(_relations.map {
       case c =>
@@ -214,7 +215,7 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
    *
    * @param model to update
    */
-  def update(model: M)(implicit ec: ExecutionContext): Future[Boolean] = {
+  def update(model: M): Future[Boolean] = {
     val document = writer.write(model)
     val id = getIdFromDocument("_id", document)
     collection.update(BSONDocument("_id" -> id), model).map {
@@ -223,7 +224,7 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
     }
   }
 
-  def safeUpdate(model: M)(implicit ec: ExecutionContext): Future[Boolean] = {
+  def safeUpdate(model: M): Future[Boolean] = {
     val document = writer.write(model)
     Future.sequence(_relations.map {
       case c =>

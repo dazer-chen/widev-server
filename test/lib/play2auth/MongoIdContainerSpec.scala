@@ -25,7 +25,7 @@ class MongoIdContainerSpec extends Specification with lib.Util with Mockito {
   "MongoIdContainer" should {
     val session = Session.generate
 
-    "get Id(ClassTag) from token" >> WithFakeApp() {
+    "get Id(ClassTag) from token" >> new WithFakeApp {
       val sessionMock = mock[Sessions]
 
       val mongoIdContainer = new MongoIdContainer[String](sessionMock)
@@ -34,12 +34,12 @@ class MongoIdContainerSpec extends Specification with lib.Util with Mockito {
       mongoIdContainer.get(session.token) should equalTo(Some(session.userId.stringify))
     }
 
-    "create a new session " >> WithFakeApp() {
+    "create a new session " >> new WithFakeApp {
       val sessionMock = mock[Sessions]
 
       val mongoIdContainer = new MongoIdContainer[String](sessionMock)
 
-      when(sessionMock.create(any[Session])(any[ExecutionContext])).thenReturn(Future(session))
+      when(sessionMock.create(any[Session])).thenReturn(Future(session))
       when(sessionMock.removeByUser(session.userId)).thenReturn(any[Future[LastError]])
 
       mongoIdContainer.startNewSession(session.userId.stringify, 0) must equalTo(session.token)
