@@ -6,6 +6,7 @@ import lib.play2auth.AuthConfigMocked
 import models.{Permission, User}
 import org.specs2.specification.Scope
 import play.api.test.{FakeApplication, FakeRequest, WithApplication}
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -19,13 +20,13 @@ trait FakeSession extends Scope with AuthConfigMocked {
   lazy val currentUser = User.generate.copy(permission = permission)
 
   val fakeContainerId = new IdContainer[Id] {
-    override def startNewSession(userId: Id, timeoutInSeconds: Int): AuthenticityToken = ???
+    override def startNewSession(userId: Id, timeoutInSeconds: Int): AuthenticityToken = BSONObjectID.generate.stringify
 
     override def get(token: AuthenticityToken): Option[Id] = Some(currentUser._id.stringify)
 
-    override def remove(token: AuthenticityToken): Unit = ???
+    override def remove(token: AuthenticityToken): Unit = Unit
 
-    override def prolongTimeout(token: AuthenticityToken, timeoutInSeconds: Int): Unit = ???
+    override def prolongTimeout(token: AuthenticityToken, timeoutInSeconds: Int): Unit = Unit
   }
 
   trait AuthConfigExtends extends AuthConfigMocked {
