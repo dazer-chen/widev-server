@@ -3,6 +3,7 @@ package controllers
 import jp.t2v.lab.play2.auth.LoginLogout
 import lib.oauth.GithubOauth2
 import models.{JsonError, JsonFormat, Users}
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.functional.syntax._
@@ -53,13 +54,12 @@ class Authentication(users: Users) extends Controller with MongoController with 
 
   //  Basic authentication method
   def Authenticate() = Action.async(BodyParsers.parse.json) { implicit request =>
-
     case class UserLogin(login : String, password: String)
 
     implicit val UserLoginReads: Reads[UserLogin] = (
       (JsPath \ "login").read[String] and
-        (JsPath \ "password").read[String]
-      )(UserLogin.apply _)
+      (JsPath \ "password").read[String]
+    )(UserLogin.apply _)
 
     val UserLoginResult = request.body.validate[UserLogin]
     UserLoginResult.fold(

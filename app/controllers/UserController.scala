@@ -24,14 +24,13 @@ class UserController(users: Users) extends Controller with AuthElement {
       }
   }
 
-  def createUser(email: String, password: String, username: String) = AsyncStack(AuthorityKey -> Visitor) {
-    request =>
-      users.create(User(email, password, username)).map {
-        user => Ok(Json.toJson(user))
-      } recover {
-        case err: DuplicateModel =>
-          NotAcceptable(s"User already exists.")
-      }
+  def createUser(email: String, password: String, username: String) = Action.async {
+    users.create(User(email, password, username)).map {
+      user => Ok(Json.toJson(user))
+    } recover {
+      case err: DuplicateModel =>
+        NotAcceptable(s"User already exists.")
+    }
   }
 }
 

@@ -52,7 +52,7 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
       "without an authenticated user should return an unauthorized error" >> new WithFakeSessionApp(Visitor) with MockFactory {
         val result = userController.getUser(currentUser._id.stringify)(fakeRequest)
 
-        status(result) must equalTo(FORBIDDEN)
+        status(result) must equalTo(UNAUTHORIZED)
       }
     }
 

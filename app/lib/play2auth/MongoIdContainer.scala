@@ -27,7 +27,7 @@ class MongoIdContainer[Id: ClassTag](sessions: Sessions = MongoIdContainer.sessi
     val user:BSONObjectID = userId match {
       case bson:BSONObjectID => bson
       case string:String => BSONObjectID(string)
-      case long:Long => BSONObjectID(long.toString)
+      case _ => throw new RuntimeException("Id format not supported.")
     }
     sessions.removeByUser(user)
     val session = sessions.create(Session(token = token, userId = user))

@@ -19,4 +19,8 @@ object Application extends Controller with AuthElement with AuthConfigImpl {
     Ok(Json.obj("login" -> "fail"))
   }
 
+  def AuthenticateTest = StackAction(AuthorityKey -> Visitor) { response =>
+    Ok("ok")
+  }
+
 }

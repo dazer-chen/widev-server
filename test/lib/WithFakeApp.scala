@@ -3,7 +3,7 @@ package lib
 import controllers.AuthConfigImpl
 import jp.t2v.lab.play2.auth.test.Helpers._
 import jp.t2v.lab.play2.auth.{AuthenticityToken, IdContainer}
-import models.{Permission, User}
+import models.{Visitor, Permission, User}
 import org.specs2.specification.Scope
 import play.api.test.{FakeApplication, FakeRequest, WithApplication}
 import reactivemongo.bson.BSONObjectID
@@ -20,7 +20,9 @@ trait FakeSession extends Scope {
   lazy val currentUser = User.generate.copy(permission = permission)
 
   trait AuthConfigMock extends AuthConfigImpl {
-    override def resolveUser(id: Id)(implicit concurrentExecutionContext: ExecutionContext): Future[Option[User]] = Future(Some(currentUser))
+    override def resolveUser(id: Id)(implicit concurrentExecutionContext: ExecutionContext): Future[Option[User]] = Future {
+      if (permission.value != Visitor.value) Some(currentUser) else None
+    }
 
     override lazy val idContainer: IdContainer[Id] = new IdContainer[Id] {
       override def startNewSession(userId: Id, timeoutInSeconds: Int): AuthenticityToken = BSONObjectID.generate.stringify
