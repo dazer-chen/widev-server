@@ -3,8 +3,10 @@ package controllers
 import lib.mongo._
 import lib.{Util, WithFakeSessionApp}
 import models._
+import org.junit.runner.RunWith
 import org.specs2._
 import org.specs2.mock.Mockito
+import org.specs2.runner.JUnitRunner
 import org.specs2.specification.Scope
 import play.api.libs.json.Json
 import play.api.test.Helpers._
@@ -16,6 +18,7 @@ import scala.concurrent.Future
  * Created by gaetansenn on 17/08/2014.
  */
 
+@RunWith(classOf[JUnitRunner])
 class UserControllerSpec extends mutable.Specification with Mockito with Util {
 
   trait MockFactory extends Scope {

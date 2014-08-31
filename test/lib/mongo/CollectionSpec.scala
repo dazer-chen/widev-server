@@ -102,17 +102,26 @@ class CollectionSpec extends Specification with Mongo with Util {
     }
 
     ".safeCreate" >> {
-      val model = model1s.generate
       "fails with corrupted model" >> {
+        val model = model1s.generate
         result(model1s.safeCreate(model)) should equalTo(false)
         result(model1s.collection.find(BSONDocument("_id" -> model._id)).one[Model1]) should beEmpty
       }
       "success with valid model" >> {
+        val model = model1s.generate
         val model2 = model2s.generate.copy(_id = model.model2Id)
         result(model2s.collection.insert(model2))
 
         result(model1s.safeCreate(model)) should equalTo(true)
         result(model1s.collection.find(BSONDocument("_id" -> model._id)).one[Model1]).get should equalTo(model)
+      }
+      "fails with duplicate entry" >> {
+        val model = model1s.generate
+        val model2 = model2s.generate.copy(_id = model.model2Id)
+        result(model2s.collection.insert(model2))
+
+        result(model1s.collection.insert(model))
+        result(model1s.safeCreate(model)) should throwA[DuplicateModel]
       }
     }
 
@@ -127,6 +136,7 @@ class CollectionSpec extends Specification with Mongo with Util {
       val model = model1s.generate
       result(model1s.create(model)) should equalTo(model)
       result(model1s.collection.find(BSONDocument("_id" -> model._id)).one[Model1]).get must equalTo(model)
+      result(model1s.create(model)) should throwA[DuplicateModel]
     }
 
     ".save" >> {

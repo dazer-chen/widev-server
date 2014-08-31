@@ -2,6 +2,7 @@ package lib.mongo
 
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
+import reactivemongo.core.errors.DatabaseException
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -36,7 +37,12 @@ trait SuperCollection {
    * Inserts a model.
    */
   private[mongo] def createDocument(document: BSONDocument): Future[BSONDocument] =
-    collection.insert(document).map { _ => document }
+    collection.insert(document).map { _ =>
+        document
+    } recover {
+      case e: DatabaseException if e.code.getOrElse(0) == 11000 =>
+        throw new DuplicateModel(e.getMessage())
+    }
 
   /**
    * Tries to insert a model and create random sub models if necessary.
@@ -153,11 +159,10 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
         val name = collectionNameToIdName(cName)
         val value = getIdFromDocument(name, document)
         c.exists("_id", value)
-    }).map {
+    }).flatMap {
       case res if !res.contains(false) =>
-        create(model)
-        true
-      case _ => false
+        create(model).map { _ => true }
+      case _ => Future(false)
     }
   }
 
@@ -196,11 +201,10 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
         val name = collectionNameToIdName(cName)
         val value = getIdFromDocument(name, document)
         c.exists("_id", value)
-    }).map {
+    }).flatMap {
       case res if !res.contains(false) =>
-        save(model)
-        true
-      case _ => false
+        save(model).map { _ => true }
+      case _ => Future(false)
     }
   }
 
