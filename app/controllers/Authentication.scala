@@ -12,6 +12,8 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoPlugin}
 
 import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 /**
  * Created by gaetansenn on 26/07/2014.

@@ -3,9 +3,11 @@ package models
 import lib.mongo.{SuperCollection, Collection}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONArray, BSONDocument, BSONObjectID, Macros}
+import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 /**
  * Created by trupin on 7/26/14.
@@ -34,13 +36,13 @@ case class Clients(db: DefaultDB) extends Collection[Client] {
     grantTypes = List(AuthorizationCodeGrandType, ImplicitGrandType)
   )
 
-  def validate(id: BSONObjectID, secret: String, grandType: GrandType)(implicit ec: ExecutionContext): Future[Boolean] =
+  def validate(id: BSONObjectID, secret: String, grandType: GrandType): Future[Boolean] =
     collection.find(BSONDocument("_id" -> id, "secret" -> secret, "grantTypes" -> grandType.value)).one[Client].map {
       case Some(_) => true
       case _ => false
     }
 
-  def find(id: BSONObjectID, secret: String, scope: Option[String])(implicit ec: ExecutionContext) =
+  def find(id: BSONObjectID, secret: String, scope: Option[String]) =
     collection.find(BSONDocument("_id" -> id, "secret" -> secret) ++ (
       if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument()
     )).one[Client]

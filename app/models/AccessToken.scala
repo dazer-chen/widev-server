@@ -6,7 +6,8 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 
-import scala.concurrent.ExecutionContext
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 /**
  * Created by trupin on 7/26/14.
@@ -40,7 +41,6 @@ case class AccessTokens(db: DefaultDB) extends Collection[AccessToken] {
   val collection = db.collection[BSONCollection]("access-tokens")
 
   def relations = {
-    import play.api.libs.concurrent.Execution.Implicits._
     val factory = Factory(db)
     Seq(
       factory.users,
@@ -56,21 +56,21 @@ case class AccessTokens(db: DefaultDB) extends Collection[AccessToken] {
     scope = Some(BSONObjectID.generate.stringify)
   )
 
-  def find(userId: BSONObjectID, clientId: BSONObjectID)(implicit ec: ExecutionContext) =
+  def find(userId: BSONObjectID, clientId: BSONObjectID) =
     collection.find(BSONDocument("userId" -> userId, "clientId" -> clientId)).one[AccessToken]
 
-  def deleteExistingAndCreate(accessToken: AccessToken)(implicit ec: ExecutionContext) =
+  def deleteExistingAndCreate(accessToken: AccessToken) =
     collection.remove(BSONDocument("userId" -> accessToken.userId, "clientId" -> accessToken.clientId)).map {
       _ => collection.insert(accessToken)
     }
 
-  def findByRefreshToken(token: String)(implicit ec: ExecutionContext) =
+  def findByRefreshToken(token: String) =
     collection.find(BSONDocument("refreshToken" -> token)).one[AccessToken]
 
-  def findByAccessToken(token: String)(implicit ec: ExecutionContext) =
+  def findByAccessToken(token: String) =
     collection.find(BSONDocument("accessToken" -> token)).one[AccessToken]
 
-  def find(clientId: BSONObjectID, scope: Option[String])(implicit ec: ExecutionContext) =
+  def find(clientId: BSONObjectID, scope: Option[String]) =
     collection.find(BSONDocument("clientId" -> clientId) ++ (
       if (scope.nonEmpty) BSONDocument("scope" -> scope.get) else BSONDocument("scope" -> BSONDocument( "$exists" -> false ))
     )).one[AccessToken]

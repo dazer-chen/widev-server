@@ -46,7 +46,7 @@ class AuthenticationSpec extends Specification with Mockito with Util {
       val userMock = mock[Users]
       val user = User.generate
 
-      when(userMock.find(any[String], any[String])(any[ExecutionContext])).thenReturn(Future(Some(user)))
+      when(userMock.find(any[String], any[String])).thenReturn(Future(Some(user)))
       class MockedAuthentication extends Authentication(userMock) with authMock
       val controller = spy(new MockedAuthentication)
       val body    = "{\"login\": \"" + user.username + "\", \"password\": \"" + user.password + "\" }"
@@ -60,7 +60,7 @@ class AuthenticationSpec extends Specification with Mockito with Util {
       val userMock = mock[Users]
       val user = User.generate
 
-      when(userMock.find(any[String], any[String])(any[ExecutionContext])).thenReturn(Future(None))
+      when(userMock.find(any[String], any[String])).thenReturn(Future(None))
       class MockedAuthentication extends Authentication(userMock) with authMock
       val controller = spy(new MockedAuthentication)
       val body    = "{\"login\": \"" + user.username + "\", \"password\": \"" + user.password + "\" }"

@@ -8,6 +8,7 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
 import reactivemongo.core.commands.LastError
 
 import scala.concurrent.{ExecutionContext, Future}
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Created by thomastosoni on 8/31/14.
@@ -46,9 +47,9 @@ case class Workspaces(db: DefaultDB) extends Collection[Workspace] {
 
 	override def relations: Seq[SuperCollection] = Seq.empty
 
-	def find(name: String, admin: String)(implicit ec: ExecutionContext): Future[Option[Workspace]] =
+	def find(name: String, admin: String): Future[Option[Workspace]] =
 		collection.find(BSONDocument("name" -> name, "admin" -> admin)).one[Workspace]
 
-	def deleteByName(name: String)(implicit ec: ExecutionContext): Future[LastError] =
+	def deleteByName(name: String): Future[LastError] =
 		collection.remove(BSONDocument("name" -> name))
 }

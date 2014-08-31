@@ -1,13 +1,15 @@
 package models
 
-import lib.mongo.{SuperCollection, CannotEnsureRelation, Collection}
+import lib.mongo.{SuperCollection, Collection}
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.Future
 import lib.util.Implicits.BSONDateTimeHandler
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 /**
  * Created by trupin on 7/26/14.
@@ -47,7 +49,7 @@ case class AuthCodes(db: DefaultDB) extends Collection[AuthCode] {
     scope = Some(BSONObjectID.generate.stringify)
   )
 
-  def findValidByCode(code: String)(implicit ec: ExecutionContext): Future[Option[AuthCode]] =
+  def findValidByCode(code: String): Future[Option[AuthCode]] =
     collection.find(BSONDocument(
       "authorizationCode" -> code,
       "expiresAt" -> BSONDocument("$gte" -> DateTime.now)

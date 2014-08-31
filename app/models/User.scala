@@ -7,6 +7,7 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 
 import scala.concurrent.{ExecutionContext, Future}
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Created by trupin on 7/26/14.
@@ -53,6 +54,6 @@ case class Users(db: DefaultDB) extends Collection[User] {
 
   def generate: User = User.generate
 
-  def find(username: String, password: String)(implicit ec: ExecutionContext): Future[Option[User]] =
+  def find(username: String, password: String): Future[Option[User]] =
     collection.find(BSONDocument("username" -> username, "password" -> password)).one[User]
 }
