@@ -2,7 +2,7 @@ package controllers
 
 import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
-import models.{Standard, User, Users, Visitor}
+import models.{Standard, User, Users}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json

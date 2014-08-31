@@ -1,12 +1,13 @@
 package models
 
-import lib.mongo.{SuperCollection, Collection}
+import lib.mongo.{Collection, SuperCollection}
 import play.api.libs.json.{Json, Writes}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONDocument, Macros, BSONObjectID}
+import reactivemongo.bson.{BSONDocument, BSONObjectID, Macros}
+import reactivemongo.core.commands.LastError
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Created by thomastosoni on 8/31/14.
@@ -47,4 +48,7 @@ case class Workspaces(db: DefaultDB) extends Collection[Workspace] {
 
 	def find(name: String, admin: String)(implicit ec: ExecutionContext): Future[Option[Workspace]] =
 		collection.find(BSONDocument("name" -> name, "admin" -> admin)).one[Workspace]
+
+	def deleteByName(name: String)(implicit ec: ExecutionContext): Future[LastError] =
+		collection.remove(BSONDocument("name" -> name))
 }
