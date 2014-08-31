@@ -28,13 +28,13 @@ object Workspace {
 			"_id" -> model._id.stringify,
 			"name" -> model.name,
 			"admin" -> model.admin,
-			"team" -> model.team,
+			"team" -> model.team
 		)
 	}
 
 	def generate = Workspace(
 		name = BSONObjectID.generate.stringify,
-		admin = BSONObjectID.generate.stringify,
+		admin = BSONObjectID.generate.stringify
 	)
 }
 

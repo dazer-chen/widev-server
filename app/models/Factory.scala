@@ -12,5 +12,6 @@ case class Factory(db: DefaultDB)(implicit ec: ExecutionContext) {
   lazy val authCodes = AuthCodes(db)
   lazy val clients = Clients(db)
   lazy val users = Users(db)
-  lazy val session = Sessions(db)
+	lazy val session = Sessions(db)
+	lazy val workspaces = Workspaces(db)
 }
