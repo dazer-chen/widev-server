@@ -21,6 +21,8 @@ class WorkspaceControllerSpec extends mutable.Specification with Mockito with Ut
 	trait MockFactory extends Scope {
 		self: WithFakeSessionApp =>
 
+		val userMock = mock[Users]
+		val user = User.generate
 		val workspacesMock = mock[Workspaces]
 		val workspaceController = new WorkspaceController(workspacesMock) with AuthConfigMock
 	}

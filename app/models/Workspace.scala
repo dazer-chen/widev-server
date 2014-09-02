@@ -16,8 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 case class Workspace(
 											name: String,
-											owner: String,
-											permission: Permission = Standard,
+											owner: BSONObjectID,
 	                    _id: BSONObjectID = BSONObjectID.generate
 	                  )
 
@@ -28,13 +27,13 @@ object Workspace {
 		def writes(model: Workspace) = Json.obj(
 			"_id" -> model._id.stringify,
 			"name" -> model.name,
-			"admin" -> model.owner
+			"owner" -> model.owner.stringify
 		)
 	}
 
 	def generate = Workspace(
 		name = BSONObjectID.generate.stringify,
-		owner = BSONObjectID.generate.stringify
+		owner = BSONObjectID.generate
 	)
 }
 
@@ -45,7 +44,7 @@ case class Workspaces(db: DefaultDB) extends Collection[Workspace] {
 
 	override def relations: Seq[SuperCollection] = Seq.empty
 
-	def find(name: String, owner: String)(implicit ec: ExecutionContext): Future[Option[Workspace]] =
+	def find(name: String, owner: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[Workspace]] =
 		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Workspace]
 
 	def deleteByName(name: String): Future[LastError] =
