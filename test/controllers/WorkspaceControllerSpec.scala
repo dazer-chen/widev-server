@@ -61,7 +61,7 @@ class WorkspaceControllerSpec extends mutable.Specification with Mockito with Ut
 			"should return a json Workspace" >> new WithFakeSessionApp(Standard) with MockFactory {
 				workspacesMock.create(any[Workspace]) returns Future(fakeWorkspace)
 
-				val result = workspaceController.createWorkspace(fakeWorkspace.name, fakeWorkspace.admin)(fakeRequest)
+				val result = workspaceController.createWorkspace(fakeWorkspace.name, fakeWorkspace.owner)(fakeRequest)
 
 				contentType(result) must equalTo(Some("application/json"))
 
@@ -73,7 +73,7 @@ class WorkspaceControllerSpec extends mutable.Specification with Mockito with Ut
 			"with a duplicate workspace, should return an error" >> new WithFakeSessionApp(Standard) with MockFactory {
 				workspacesMock.create(any[Workspace]) returns Future.failed(new DuplicateModel("Duplicate workspace"))
 
-				val result = workspaceController.createWorkspace(fakeWorkspace.name, fakeWorkspace.admin)(fakeRequest)
+				val result = workspaceController.createWorkspace(fakeWorkspace.name, fakeWorkspace.owner)(fakeRequest)
 
 				status(result) must equalTo(NOT_ACCEPTABLE)
 
@@ -81,7 +81,7 @@ class WorkspaceControllerSpec extends mutable.Specification with Mockito with Ut
 			}
 
 			"without an authenticated user should return an unauthorized error" >> new WithFakeSessionApp(Visitor) with MockFactory {
-				val result = workspaceController.createWorkspace(fakeWorkspace.name, fakeWorkspace.admin)(fakeRequest)
+				val result = workspaceController.createWorkspace(fakeWorkspace.name, fakeWorkspace.owner)(fakeRequest)
 
 				status(result) must equalTo(UNAUTHORIZED)
 			}

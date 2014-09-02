@@ -25,9 +25,9 @@ class WorkspaceController(workspaces: Workspaces) extends Controller with AuthEl
 			}
 	}
 
-	def createWorkspace(name: String, admin_name: String) =  AsyncStack(AuthorityKey -> Standard) {
+	def createWorkspace(name: String, owner: String) =  AsyncStack(AuthorityKey -> Standard) {
 		request =>
-			workspaces.create(Workspace(name, admin_name)).map {
+			workspaces.create(Workspace(name, owner)).map {
 				workspace => Ok(Json.toJson(workspace))
 			} recover {
 				case err: DuplicateModel =>

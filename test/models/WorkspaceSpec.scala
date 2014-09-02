@@ -19,8 +19,8 @@ class WorkspaceSpec extends Specification with Mongo with lib.Util {
 			val workspace = workspaces.generate
 			result(workspaces.create(workspace))
 
-			"with name and administrator" >> {
-				result(workspaces.find(workspace.name, workspace.admin)).get should be equalTo workspace
+			"with name and owner" >> {
+				result(workspaces.find(workspace.name, workspace.owner)).get should be equalTo workspace
 			}
 		}
 
