@@ -44,9 +44,9 @@ case class Workspaces(db: DefaultDB) extends Collection[Workspace] {
 
 	override def relations: Seq[SuperCollection] = Seq.empty
 
-	def find(name: String, owner: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[Workspace]] =
-		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Workspace]
-
-	def deleteByName(name: String): Future[LastError] =
-		collection.remove(BSONDocument("name" -> name))
+//	def find(name: String, owner: BSONObjectID)(implicit ec: ExecutionContext): Future[Option[Workspace]] =
+//		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Workspace]
+//
+//	def deleteByName(name: String): Future[LastError] =
+//		collection.remove(BSONDocument("name" -> name))
 }
