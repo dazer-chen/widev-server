@@ -8,7 +8,11 @@ import org.specs2._
 import org.specs2.mock.Mockito
 import org.specs2.runner.JUnitRunner
 import org.specs2.specification.Scope
-import play.api.libs.json.Json
+import play.api.http.HeaderNames
+import play.api.libs.iteratee.Input
+import play.api.libs.json.{JsString, Json}
+import play.api.mvc.Result
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import reactivemongo.bson.BSONObjectID
 
@@ -60,15 +64,24 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
     }
 
     ".createUser" >> {
-      val fakeUser = User.generate
       "should return a json UserModel" >> new WithFakeSessionApp(Visitor) with MockFactory {
-        usersMock.create(any[User]) returns Future(fakeUser)
+        usersMock.create(any[User]) returns Future(currentUser)
 
-        val result = userController.createUser(fakeUser.email, fakeUser.password, fakeUser.username)(fakeRequest)
+        val json = Json.obj(
+          "email" -> JsString(currentUser.email),
+          "password" -> JsString(currentUser.password),
+        "username" -> JsString(currentUser.username)
+        )
+
+        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\", \"username\": \"" + currentUser.password + "\" }"
+        val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+
+        val result: Future[Result] = userController.createUser().apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
 
         contentType(result) must equalTo(Some("application/json"))
 
-        contentAsJson(result) must equalTo(Json.toJson(fakeUser))
+        contentAsJson(result) must equalTo(Json.toJson(currentUser))
 
         there was one(usersMock).create(any[User])
       }
@@ -77,7 +90,10 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
       "with a duplicate user, should return an error" >> new WithFakeSessionApp(Visitor) with MockFactory {
         usersMock.create(any[User]) returns Future.failed(new DuplicateModel("duplicate user"))
 
-        val result = userController.createUser(fakeUser.email, fakeUser.password, fakeUser.username)(fakeRequest)
+        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\", \"username\": \"" + currentUser.password + "\" }"
+        val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result: Future[Result] = userController.createUser().apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
 
         status(result) must equalTo(NOT_ACCEPTABLE)
 

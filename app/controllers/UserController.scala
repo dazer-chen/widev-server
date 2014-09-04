@@ -5,10 +5,14 @@ import lib.mongo.DuplicateModel
 import models.{Standard, User, Users}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsError, Reads, JsPath, Json}
 import play.api.mvc._
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
+import play.api.libs.functional.syntax._
+
+import scala.concurrent.Future
+
 
 /**
  * Created by gaetansenn on 17/08/2014.
@@ -24,13 +28,32 @@ class UserController(users: Users) extends Controller with AuthElement {
       }
   }
 
-  def createUser(email: String, password: String, username: String) = Action.async {
-    users.create(User(email, password, username)).map {
-      user => Ok(Json.toJson(user))
-    } recover {
-      case err: DuplicateModel =>
-        NotAcceptable(s"User already exists.")
-    }
+  /* parameters email, password, username */
+  def createUser = Action.async(BodyParsers.parse.json) { request =>
+
+    case class createUser(email: String, password: String, username : String)
+
+    implicit val createUserReads: Reads[createUser] = (
+      (JsPath \ "email").read[String] and
+        (JsPath \ "password").read[String] and
+        (JsPath \ "username").read[String]
+      )(createUser.apply _)
+
+    val user = request.body.validate[createUser]
+
+    user.fold(
+      errors => {
+        Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+      },
+      user => {
+        users.create(User(user.email, user.password, user.username)).map {
+          user => Ok(Json.toJson(user))
+        } recover {
+          case err: DuplicateModel =>
+            NotAcceptable(s"User already exists.")
+        }
+      }
+    )
   }
 }
 
