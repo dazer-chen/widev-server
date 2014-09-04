@@ -1,11 +1,12 @@
 package controllers
 
+import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
-import models.{Workspace, Workspaces}
+import models.{Standard, Workspace, Workspaces}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.Controller
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 
@@ -13,10 +14,10 @@ import reactivemongo.bson.BSONObjectID
  * Created by thomastosoni on 8/31/14.
  */
 
-class WorkspaceController(workspaces: Workspaces) extends Controller {
+class WorkspaceController(workspaces: Workspaces) extends Controller with AuthElement {
 	self: AuthConfigImpl =>
 
-	def getWorkspace(id: String) = Action.async {
+	def getWorkspace(id: String) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
 			workspaces.find(BSONObjectID(id)).map {
 				case Some(workspace) => Ok(Json.toJson(workspace))
@@ -24,7 +25,7 @@ class WorkspaceController(workspaces: Workspaces) extends Controller {
 			}
 	}
 
-	def createWorkspace(name: String, owner: BSONObjectID) = Action.async {
+	def createWorkspace(name: String, owner: BSONObjectID) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
 			workspaces.create(Workspace(name, owner)).map {
 				workspace => Ok(Json.toJson(workspace))
