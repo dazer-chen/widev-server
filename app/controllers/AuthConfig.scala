@@ -70,8 +70,12 @@ trait AuthConfigImpl extends AuthConfig with Results {
   /**
    * Where to redirect the user after a successful login.
    */
-  def loginSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] =
-    Future.successful(Ok(Json.obj("login" -> "success")))
+  def loginSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
+    request.cookies.get(cookieName) match {
+      case Some(cookie) =>     Future.successful(Ok(Json.obj("login" -> "success", "token" -> cookie.value)))
+      case None => Future.successful(Ok(Json.obj("login" -> "success")))
+    }
+  }
 
   /**
    * Where to redirect the user after logging out

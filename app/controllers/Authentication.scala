@@ -71,7 +71,7 @@ class Authentication(users: Users) extends Controller with MongoController with 
       login => {
         users.find(login.login, login.password).flatMap {
           case Some(u) => {
-            gotoLoginSucceeded(u._id.toString())
+            gotoLoginSucceeded(u._id.stringify)
           }
           case _ => Future.successful(BadRequest(Json.obj("status" -> "KO", "message" -> "unknown login or password")))
         }
