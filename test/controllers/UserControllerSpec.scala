@@ -73,6 +73,7 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
         there was one(usersMock).create(any[User])
       }
 
+
       "with a duplicate user, should return an error" >> new WithFakeSessionApp(Visitor) with MockFactory {
         usersMock.create(any[User]) returns Future.failed(new DuplicateModel("duplicate user"))
 
