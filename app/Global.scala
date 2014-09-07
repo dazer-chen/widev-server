@@ -6,10 +6,27 @@ import lib.mongo.DuplicateModel
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
-
+import play.filters.gzip.GzipFilter
 import scala.concurrent.Future
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 object Global extends GlobalSettings {
+  val loggingFilter = Filter { (nextFilter, requestHeader) =>
+    val startTime = System.currentTimeMillis
+    nextFilter(requestHeader).map { result =>
+      val endTime = System.currentTimeMillis
+      val requestTime = endTime - startTime
+      Logger.info(s"${requestHeader.method} ${requestHeader.uri} took ${requestTime}ms " +
+        s"and returned ${result.header.status}")
+      result.withHeaders("Request-Time" -> requestTime.toString)
+    }
+  }
+
+  override def doFilter(next: EssentialAction): EssentialAction = {
+    Filters(super.doFilter(next), loggingFilter, new GzipFilter())
+  }
+
   override def onError(request: RequestHeader, ex: Throwable) = {
     Future.successful {
       ex match {

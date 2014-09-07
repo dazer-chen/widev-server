@@ -16,6 +16,7 @@ libraryDependencies ++= Seq(
   anorm,
   cache,
   ws,
+  filters,
   "jp.t2v" %% "stackable-controller" % "0.4.0",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT",
   "com.nulab-inc" %% "play2-oauth2-provider" % "0.7.2",
