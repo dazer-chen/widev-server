@@ -26,3 +26,6 @@ POST    /authenticate                       controllers.Authentication.Authentic
 #User Module
 GET     /users/:id                          controllers.UserController.getUser(id: String)
 POST    /users                              controllers.UserController.createUser
+
+#FS Module
+GET     /getIdTest                          controllers.Application.getFileTest
