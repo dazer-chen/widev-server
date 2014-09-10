@@ -46,7 +46,11 @@ class UserController(users: Users) extends Controller with AuthElement {
         Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
       },
       user => {
-        users.create(User(user.email, user.password, user.username)).map {
+        users.create(User(
+          email = user.email,
+          password = user.password,
+          username = user.username
+        )).map {
           user => Ok(Json.toJson(user))
         } recover {
           case err: DuplicateModel =>

@@ -32,11 +32,11 @@ class Authentication(users: Users) extends Controller with MongoController with 
   }
 
   def success(session_token: String) = Action {
-    Ok(Json.obj("status" -> "ok", "session_token" -> session_token))
+    Ok(Json.obj("session_token" -> session_token))
   }
 
   def fail(message: String) = Action {
-    Ok(Json.obj("status" -> "fail", "message" -> message))
+    NotFound(Json.obj("message" -> message))
   }
 
   def githubCallback(code: String) = Action.async { implicit request =>

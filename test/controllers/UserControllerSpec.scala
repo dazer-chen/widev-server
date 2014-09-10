@@ -76,7 +76,6 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
         val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\", \"username\": \"" + currentUser.password + "\" }"
         val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
 
-
         val result: Future[Result] = userController.createUser().apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
 
         contentType(result) must equalTo(Some("application/json"))
