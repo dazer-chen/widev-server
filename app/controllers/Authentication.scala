@@ -2,6 +2,7 @@ package controllers
 
 import jp.t2v.lab.play2.auth.LoginLogout
 import lib.oauth.GithubOauth2
+import lib.play2auth.LoginSuccess
 import models.{JsonError, JsonFormat, Users}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
@@ -23,7 +24,7 @@ object UserFactory {
   lazy val users = Users(ReactiveMongoPlugin.db)
 }
 
-class Authentication(users: Users) extends Controller with MongoController with LoginLogout {
+class Authentication(users: Users) extends Controller with MongoController with LoginSuccess {
 
   self: AuthConfigImpl =>
 
@@ -71,7 +72,7 @@ class Authentication(users: Users) extends Controller with MongoController with 
       login => {
         users.find(login.login, login.password).flatMap {
           case Some(u) => {
-            gotoLoginSucceeded(u._id.stringify)
+            gotoLoginSucceeded(u._id.stringify)(request, defaultContext)
           }
           case _ => Future.successful(BadRequest(Json.obj("status" -> "KO", "message" -> "unknown login or password")))
         }

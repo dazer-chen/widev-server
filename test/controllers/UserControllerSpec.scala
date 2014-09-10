@@ -80,8 +80,6 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
 
         contentType(result) must equalTo(Some("application/json"))
 
-        contentAsJson(result) must equalTo(Json.toJson(currentUser))
-
         there was one(usersMock).create(any[User])
       }
 
