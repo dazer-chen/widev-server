@@ -1,6 +1,6 @@
 package controllers
 
-import jp.t2v.lab.play2.auth.AuthElement
+import jp.t2v.lab.play2.auth.{LoginLogout, AuthElement}
 import lib.mongo.DuplicateModel
 import models.{Standard, User, Users}
 import play.api.Play.current
@@ -17,7 +17,7 @@ import scala.concurrent.Future
 /**
  * Created by gaetansenn on 17/08/2014.
  */
-class UserController(users: Users) extends Controller with AuthElement {
+class UserController(users: Users) extends Controller with AuthElement with LoginLogout {
   self: AuthConfigImpl =>
 
   def getUser(id: String) = AsyncStack(AuthorityKey -> Standard) {
@@ -29,7 +29,7 @@ class UserController(users: Users) extends Controller with AuthElement {
   }
 
   /* parameters email, password, username */
-  def createUser = Action.async(BodyParsers.parse.json) { request =>
+  def createUser = Action.async(BodyParsers.parse.json) { implicit request =>
 
     case class createUser(email: String, password: String, username : String)
 
@@ -50,11 +50,13 @@ class UserController(users: Users) extends Controller with AuthElement {
           email = user.email,
           password = user.password,
           username = user.username
-        )).map {
-          user => Ok(Json.toJson(user))
+        )).flatMap {
+          user => {
+	          println("user id is : " + user._id.stringify)
+	          gotoLoginSucceeded(user._id.stringify)
+          }
         } recover {
-          case err: DuplicateModel =>
-            NotAcceptable(s"User already exists.")
+          case err: DuplicateModel => BadRequest(Json.obj("status" -> "KO", "message" -> "user already exists"))
         }
       }
     )
