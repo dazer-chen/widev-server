@@ -73,7 +73,7 @@ object GithubOauth2 extends Oauth2 with GitHubAPI {
     Json.parse(response).validate[UserResponse] match {
       case s: JsSuccess[UserResponse] => {
         val response = s.get
-        User(lastName = Option(response.name), email = response.email, password = "", username = response.username, permission = Standard)
+        User(lastName = Option(response.name), email = response.email, password = "", permission = Standard)
       }
       case e: JsError => throw new UserHandlerError(e.toString)
     }

@@ -69,11 +69,10 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
 
         val json = Json.obj(
           "email" -> JsString(currentUser.email),
-          "password" -> JsString(currentUser.password),
-        "username" -> JsString(currentUser.username)
+          "password" -> JsString(currentUser.password)
         )
 
-        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\", \"username\": \"" + currentUser.password + "\" }"
+        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\" }"
         val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
 
         val result: Future[Result] = userController.createUser().apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
@@ -87,7 +86,7 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
       "with a duplicate user, should return an error" >> new WithFakeSessionApp(Visitor) with MockFactory {
         usersMock.create(any[User]) returns Future.failed(new DuplicateModel("duplicate user"))
 
-        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\", \"username\": \"" + currentUser.password + "\" }"
+        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\" }"
         val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
 
         val result: Future[Result] = userController.createUser().apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)

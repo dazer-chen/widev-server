@@ -49,7 +49,7 @@ class AuthenticationSpec extends Specification with Mockito with Util {
       when(userMock.find(any[String], any[String])).thenReturn(Future(Some(user)))
       class MockedAuthentication extends Authentication(userMock) with authMock
       val controller = spy(new MockedAuthentication)
-      val body    = "{\"login\": \"" + user.username + "\", \"password\": \"" + user.password + "\" }"
+      val body    = "{\"email\": \"" + user.email + "\", \"password\": \"" + user.password + "\" }"
       val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       val res: Future[Result] = controller.Authenticate.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
       status(res) must equalTo(OK)
@@ -63,7 +63,7 @@ class AuthenticationSpec extends Specification with Mockito with Util {
       when(userMock.find(any[String], any[String])).thenReturn(Future(None))
       class MockedAuthentication extends Authentication(userMock) with authMock
       val controller = spy(new MockedAuthentication)
-      val body    = "{\"login\": \"" + user.username + "\", \"password\": \"" + user.password + "\" }"
+      val body    = "{\"login\": \"" + user.email + "\", \"password\": \"" + user.password + "\" }"
       val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       val res: Future[Result] = controller.Authenticate.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
       status(res) must equalTo(BAD_REQUEST)
