@@ -66,7 +66,7 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 
         bucketsMock.create(any[Bucket]) returns Future(currentBucket)
 
-				val result = bucketController.createBucket(currentBucket.name, currentBucket.owner)(fakeRequest)
+				val result = bucketController.createBucket(currentBucket.name, currentBucket.owner.stringify)(fakeRequest)
 
 				contentType(result) must equalTo(Some("application/json"))
 
@@ -78,7 +78,7 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 			"with a duplicate bucket, should return an error" >> new WithFakeSessionApp(Standard) with MockFactory {
 				bucketsMock.create(any[Bucket]) returns Future.failed(new DuplicateModel("Duplicate Bucket"))
 
-				val result = bucketController.createBucket(currentBucket.name, currentBucket.owner)(fakeRequest)
+				val result = bucketController.createBucket(currentBucket.name, currentBucket.owner.stringify)(fakeRequest)
 
 				status(result) must equalTo(NOT_ACCEPTABLE)
 
@@ -87,7 +87,7 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 
 			"without an authenticated user should return an unauthorized error" >> new WithFakeSessionApp(Visitor) with MockFactory {
 
-				val result = bucketController.createBucket(any[String], any[BSONObjectID])(fakeRequest)
+				val result = bucketController.createBucket(any[String], any[String])(fakeRequest)
 
 				status(result) must equalTo(UNAUTHORIZED)
 			}

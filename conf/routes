@@ -26,3 +26,7 @@ POST    /authenticate                       controllers.Authentication.Authentic
 #User Module
 GET     /users/:id                          controllers.UserController.getUser(id: String)
 POST    /users                              controllers.UserController.createUser
+
+# Bucket
+GET     /buckets/:id                        controllers.BucketController.getBucket(id: String)
+POST    /buckets                            controllers.BucketController.createBucket(name : String, owner: String)

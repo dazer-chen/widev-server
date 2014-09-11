@@ -25,9 +25,9 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
 			}
 	}
 
-	def createBucket(name: String, owner: BSONObjectID) = AsyncStack(AuthorityKey -> Standard) {
+	def createBucket(name: String, owner: String) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
-			buckets.create(Bucket(name, owner)).map {
+			buckets.create(Bucket(name, BSONObjectID(owner))).map {
 				bucket => Ok(Json.toJson(bucket))
 			} recover {
 				case err: DuplicateModel =>
