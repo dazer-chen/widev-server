@@ -14,38 +14,38 @@ import scala.concurrent.Future
  * Created by thomastosoni on 8/31/14.
  */
 
-case class Workspace(
+case class Bucket(
 											name: String,
 											owner: BSONObjectID,
 	                    _id: BSONObjectID = BSONObjectID.generate
 	                  )
 
-object Workspace {
-	implicit val handler = Macros.handler[Workspace]
+object Bucket {
+	implicit val handler = Macros.handler[Bucket]
 
-	implicit val WorkspaceWrites = new Writes[Workspace] {
-		def writes(model: Workspace) = Json.obj(
+	implicit val BucketWrites = new Writes[Bucket] {
+		def writes(model: Bucket) = Json.obj(
 			"_id" -> model._id.stringify,
 			"name" -> model.name,
 			"owner" -> model.owner.stringify
 		)
 	}
 
-	def generate = Workspace(
+	def generate = Bucket(
 		name = BSONObjectID.generate.stringify,
 		owner = BSONObjectID.generate
 	)
 }
 
-case class Workspaces(db: DefaultDB) extends Collection[Workspace] {
-	val collection = db.collection[BSONCollection]("workspaces")
+case class Buckets(db: DefaultDB) extends Collection[Bucket] {
+	val collection = db.collection[BSONCollection]("buckets")
 
-	override def generate: Workspace = Workspace.generate
+	override def generate: Bucket = Bucket.generate
 
 	override def relations: Seq[SuperCollection] = Seq.empty
 
-	def find(name: String, owner: BSONObjectID): Future[Option[Workspace]] =
-		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Workspace]
+	def find(name: String, owner: BSONObjectID): Future[Option[Bucket]] =
+		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Bucket]
 
 	def deleteByName(name: String): Future[LastError] =
 		collection.remove(BSONDocument("name" -> name))

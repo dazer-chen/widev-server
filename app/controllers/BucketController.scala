@@ -2,7 +2,7 @@ package controllers
 
 import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
-import models.{Standard, Workspace, Workspaces}
+import models.{Standard, Bucket, Buckets}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -14,26 +14,26 @@ import reactivemongo.bson.BSONObjectID
  * Created by thomastosoni on 8/31/14.
  */
 
-class WorkspaceController(workspaces: Workspaces) extends Controller with AuthElement {
+class BucketController(buckets: Buckets) extends Controller with AuthElement {
 	self: AuthConfigImpl =>
 
-	def getWorkspace(id: String) = AsyncStack(AuthorityKey -> Standard) {
+	def getBucket(id: String) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
-			workspaces.find(BSONObjectID(id)).map {
+			buckets.find(BSONObjectID(id)).map {
 				case Some(workspace) => Ok(Json.toJson(workspace))
 				case None => NotFound(s"Couldn't find workspace for id: $id")
 			}
 	}
 
-	def createWorkspace(name: String, owner: BSONObjectID) = AsyncStack(AuthorityKey -> Standard) {
+	def createBucket(name: String, owner: BSONObjectID) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
-			workspaces.create(Workspace(name, owner)).map {
-				workspace => Ok(Json.toJson(workspace))
+			buckets.create(Bucket(name, owner)).map {
+				bucket => Ok(Json.obj("id" -> bucket._id.stringify))
 			} recover {
 				case err: DuplicateModel =>
-					NotAcceptable(s"Workspace already exists.")
+					NotAcceptable(s"Bucket already exists.")
 			}
 	}
 }
 
-object WorkspaceController extends WorkspaceController(Workspaces(ReactiveMongoPlugin.db)) with AuthConfigImpl
+object BucketController extends BucketController(Buckets(ReactiveMongoPlugin.db)) with AuthConfigImpl
