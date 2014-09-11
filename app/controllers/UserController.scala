@@ -32,12 +32,13 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
   /* parameters email, password, username */
   def createUser = Action.async(BodyParsers.parse.json) { request =>
 
-    case class createUser(email: String, password: String, username : String)
+    case class createUser(email: String, password: String, firstName: String, lastName: String)
 
     implicit val createUserReads: Reads[createUser] = (
       (JsPath \ "email").read[String] and
         (JsPath \ "password").read[String] and
-        (JsPath \ "username").read[String]
+        (JsPath \ "firstname").read[String] and
+        (JsPath \ "lastname").read[String]
       )(createUser.apply _)
 
     val user = request.body.validate[createUser]
@@ -48,7 +49,7 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
       },
       user => {
 
-        users.create(User(user.email, user.password, user.username)).flatMap {
+        users.create(User(user.email, user.password, firstName = Some(user.firstName), lastName = Some(user.lastName))).flatMap {
           user => gotoLoginSucceeded(user._id.stringify)(request, defaultContext)
         } recover {
           case err: DuplicateModel =>

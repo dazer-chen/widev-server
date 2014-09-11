@@ -57,10 +57,10 @@ class Authentication(users: Users) extends Controller with MongoController with 
 
   //  Basic authentication method
   def Authenticate() = Action.async(BodyParsers.parse.json) { implicit request =>
-    case class UserLogin(login : String, password: String)
+    case class UserLogin(email : String, password: String)
 
     implicit val UserLoginReads: Reads[UserLogin] = (
-      (JsPath \ "login").read[String] and
+      (JsPath \ "email").read[String] and
       (JsPath \ "password").read[String]
     )(UserLogin.apply _)
 
@@ -70,7 +70,7 @@ class Authentication(users: Users) extends Controller with MongoController with 
         Future.successful(BadRequest(JsonFormat.generateError(JsonError(1234, "", "BadRequest", BAD_REQUEST, "Please refer to the documentation", JsError.toFlatJson(errors).toString(), None))))
       },
       login => {
-        users.find(login.login, login.password).flatMap {
+        users.find(login.email, login.password).flatMap {
           case Some(u) => {
             gotoLoginSucceeded(u._id.stringify)(request, defaultContext)
           }

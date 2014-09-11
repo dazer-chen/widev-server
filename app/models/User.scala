@@ -15,7 +15,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 case class User(
                  email: String,
-                 username: String,
                  password: String,
                  firstName: Option[String] = None,
                  lastName: Option[String] = None,
@@ -32,7 +31,6 @@ object User {
     def writes(model: User) = Json.obj(
       "_id" -> model._id.stringify,
       "email" -> model.email,
-      "username" -> model.username,
       "password" -> model.password,
       "firstName" -> model.firstName,
       "lastName" -> model.lastName
@@ -41,7 +39,6 @@ object User {
 
   def generate = User(
     email = BSONObjectID.generate.stringify,
-    username = BSONObjectID.generate.stringify,
     password = BSONObjectID.generate.stringify
   )
 
@@ -54,6 +51,6 @@ case class Users(db: DefaultDB) extends Collection[User] {
 
   def generate: User = User.generate
 
-  def find(username: String, password: String): Future[Option[User]] =
-    collection.find(BSONDocument("username" -> username, "password" -> password)).one[User]
+  def find(email: String, password: String): Future[Option[User]] =
+    collection.find(BSONDocument("email" -> email, "password" -> password)).one[User]
 }
