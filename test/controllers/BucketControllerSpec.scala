@@ -62,7 +62,7 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 		}
 
 		".createBucket" >> {
-			"should return the id of the bucket generated" >> new WithFakeSessionApp(Standard) with MockFactory {
+			"should return generated bucket" >> new WithFakeSessionApp(Standard) with MockFactory {
 
         bucketsMock.create(any[Bucket]) returns Future(currentBucket)
 
@@ -70,7 +70,7 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 
 				contentType(result) must equalTo(Some("application/json"))
 
-				contentAsJson(result) must equalTo(Json.obj("id" -> currentBucket._id.stringify))
+				contentAsJson(result) must equalTo(Json.toJson(currentBucket))
 
 				there was one(bucketsMock).create(any[Bucket])
 			}

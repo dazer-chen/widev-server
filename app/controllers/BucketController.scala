@@ -20,7 +20,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
 	def getBucket(id: String) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
 			buckets.find(BSONObjectID(id)).map {
-				case Some(workspace) => Ok(Json.toJson(workspace))
+				case Some(bucket) => Ok(Json.toJson(bucket))
 				case None => NotFound(s"Couldn't find workspace for id: $id")
 			}
 	}
@@ -28,7 +28,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
 	def createBucket(name: String, owner: BSONObjectID) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
 			buckets.create(Bucket(name, owner)).map {
-				bucket => Ok(Json.obj("id" -> bucket._id.stringify))
+				bucket => Ok(Json.toJson(bucket))
 			} recover {
 				case err: DuplicateModel =>
 					NotAcceptable(s"Bucket already exists.")
