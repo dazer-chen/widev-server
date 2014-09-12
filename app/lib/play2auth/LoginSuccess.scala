@@ -18,7 +18,8 @@ trait LoginSuccess {
   def gotoLoginSucceeded(userId: Id)(implicit request: RequestHeader, ctx: ExecutionContext): Future[Result] = {
     val token = idContainer.startNewSession(userId, sessionTimeoutInSeconds)
     val value = Crypto.sign(token) + token
-    Future(Ok(Json.obj("login" -> "success", "token" -> value)))
+    Future(Ok(Json.obj("login" -> "success", "token" -> value)).withCookies(Cookie(cookieName, value, None, cookiePathOption, cookieDomainOption, cookieSecureOption, cookieHttpOnlyOption))
+    )
   }
 
 }

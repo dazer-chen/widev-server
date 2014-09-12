@@ -29,4 +29,4 @@ POST    /users                              controllers.UserController.createUse
 
 # Bucket
 GET     /buckets/:id                        controllers.BucketController.getBucket(id: String)
-POST    /buckets                            controllers.BucketController.createBucket(name : String, owner: String)
+POST    /buckets                            controllers.BucketController.createBucket

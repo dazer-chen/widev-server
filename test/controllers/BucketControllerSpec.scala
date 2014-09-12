@@ -6,7 +6,10 @@ import models._
 import org.specs2.mock.Mockito
 import org.specs2.mutable
 import org.specs2.specification.Scope
+import play.api.http.HeaderNames
+import play.api.libs.iteratee.Input
 import play.api.libs.json.Json
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import reactivemongo.bson.BSONObjectID
 
@@ -66,7 +69,10 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 
         bucketsMock.create(any[Bucket]) returns Future(currentBucket)
 
-				val result = bucketController.createBucket(currentBucket.name, currentBucket.owner.stringify)(fakeRequest)
+        val body    = "{\"name\": \"" + currentBucket.name + "\", \"owner\": \"" + currentBucket.owner.stringify + "\" }"
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+				val result = bucketController.createBucket.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
 
 				contentType(result) must equalTo(Some("application/json"))
 
@@ -78,7 +84,10 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 			"with a duplicate bucket, should return an error" >> new WithFakeSessionApp(Standard) with MockFactory {
 				bucketsMock.create(any[Bucket]) returns Future.failed(new DuplicateModel("Duplicate Bucket"))
 
-				val result = bucketController.createBucket(currentBucket.name, currentBucket.owner.stringify)(fakeRequest)
+        val body    = "{\"name\": \"" + currentBucket.name + "\", \"owner\": \"" + currentBucket.owner.stringify + "\" }"
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result = bucketController.createBucket.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
 
 				status(result) must equalTo(NOT_ACCEPTABLE)
 
@@ -87,7 +96,11 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 
 			"without an authenticated user should return an unauthorized error" >> new WithFakeSessionApp(Visitor) with MockFactory {
 
-				val result = bucketController.createBucket(any[String], any[String])(fakeRequest)
+        val body = "{}"
+
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result = bucketController.createBucket.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
 
 				status(result) must equalTo(UNAUTHORIZED)
 			}
