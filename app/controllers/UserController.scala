@@ -1,6 +1,6 @@
 package controllers
 
-import jp.t2v.lab.play2.auth.{LoginLogout, AuthElement}
+import jp.t2v.lab.play2.auth.{AsyncAuth, LoginLogout, AuthElement}
 import lib.mongo.DuplicateModel
 import lib.play2auth.LoginSuccess
 import models.{Standard, User, Users}
@@ -18,15 +18,21 @@ import scala.concurrent.Future
 /**
  * Created by gaetansenn on 17/08/2014.
  */
-class UserController(users: Users) extends Controller with AuthElement with LoginSuccess {
+class UserController(users: Users) extends Controller with AuthElement with LoginSuccess with AsyncAuth {
   self: AuthConfigImpl =>
 
-  def getUser(id: String) = AsyncStack(AuthorityKey -> Standard) {
-    request =>
+  def getUser(id: String) = AsyncStack(AuthorityKey -> Standard) { request =>
       users.find(BSONObjectID(id)).map {
         case Some(user) => Ok(Json.toJson(user))
         case None => NotFound(s"Couldn't find user for id: $id")
       }
+  }
+
+  def getCurrentUser = optionalUserAction.async { user => implicit request =>
+    user match {
+      case Some(account) => Future(Ok(Json.toJson(user)))
+      case None => Future(NotFound(s"Couldn't find current user, please check if your session is active"))
+    }
   }
 
   /* parameters email, password, username */
