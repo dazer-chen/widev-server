@@ -7,7 +7,7 @@ import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
 import models.{Bucket, Buckets, Standard}
 import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormatter, DateTimeFormat}
+import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -78,7 +78,6 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
           Future.successful(BadRequest(JsError.toFlatJson(errors)))
         },
         bucketItems => {
-
           buckets.find(BSONObjectID(id)).flatMap {
             case Some(bucket) =>
               Future.sequence(bucketItems.map {
