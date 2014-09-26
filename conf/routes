@@ -29,6 +29,7 @@ GET     /users/:id                          controllers.UserController.getUser(i
 POST    /users                              controllers.UserController.createUser
 
 # Bucket
+GET     /buckets/ws                         controllers.BucketController.socket
 GET     /buckets/:id                        controllers.BucketController.getBucket(id: String)
 PUT     /buckets/:id/sync                   controllers.BucketController.syncBucket(id: String)
 POST    /buckets                            controllers.BucketController.createBucket

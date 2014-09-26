@@ -11,9 +11,10 @@ import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
+import play.api.libs.iteratee.{Iteratee, Concurrent}
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import play.api.mvc.{BodyParsers, Controller}
+import play.api.mvc.{WebSocket, BodyParsers, Controller}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 
@@ -27,6 +28,20 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
   self: AuthConfigImpl =>
 
   val s3Bucket = S3(PlayConfiguration("s3.bucket"))(AwsCredentials.fromConfiguration)
+
+  var ws: Option[WebSocket[String, String]] = None
+
+  val (out, channel) = Concurrent.broadcast[String]
+  val in = Iteratee.foreach[String] {
+    msg =>
+      println(msg)
+
+      channel push("I received your message: " + msg)
+  }
+
+  def socket = WebSocket.using[String] { request =>
+    (in, out)
+  }
 
   def getBucket(id: String) = AsyncStack(AuthorityKey -> Standard) {
     request =>
