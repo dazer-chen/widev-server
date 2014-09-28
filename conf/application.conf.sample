@@ -60,6 +60,9 @@ mongo-async-driver {
 mongodb.uri="mongodb://localhost:27017/widev"
 mongodb.uri=${?MONGOLAB_URI}
 
+redis.host = "localhost"
+redis.port = 6379
+
 #aws
 aws.accessKeyId="Your AWS access key id here"
 aws.secretKey="Your AWS secret key here"
