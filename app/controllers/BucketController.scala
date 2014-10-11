@@ -83,17 +83,15 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
       val filePath = request.getQueryString("file-path")
       if (filePath.isEmpty)
         Future(BadRequest(s"'name' parameter required."))
-      else {
-        val filePathHash = MD5.hex_digest(filePath.get)
+      else
         buckets.find(BSONObjectID(id)).flatMap {
           case Some(bucket) =>
-            s3Bucket.get(s"${bucket.name}/$filePathHash").map {
+            s3Bucket.get(bucket.physicalFilePath(filePath.get)).map {
               case BucketFile(path, contentType, content, acl, headers) =>
                 Ok(content).withHeaders(headers.getOrElse(Seq()).toSeq:_*)
             }
           case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
         }
-      }
   }
 
   def listFiles(id: String) = AsyncStack(AuthorityKey -> Standard) {
@@ -114,7 +112,6 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
         Future(BadRequest("Missing parameter(s)."))
       else {
         val bsonId = BSONObjectID(id)
-        val filePathSum = MD5.hex_digest(filePath.get)
         val fileContentSum = MD5.hex_digest(request.body.asRaw.get.asBytes().get)
 
         buckets.findBucketInfos(bsonId).flatMap {
@@ -128,7 +125,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
                 buckets.setFileHeader(BSONObjectID(id), fileHeader = fileHeader).flatMap {
                   _ =>
                     Logger.debug(s"Uploading $filePath to bucket ${bucket.name}")
-                    s3Bucket.initiateMultipartUpload(BucketFile(bucket.name + "/" + filePathSum, contentType.get)).flatMap {
+                    s3Bucket.initiateMultipartUpload(BucketFile(bucket.physicalFilePath(filePath.get), contentType.get)).flatMap {
                       initTicket =>
                         s3Bucket.uploadPart(initTicket, BucketFilePart(1, request.body.asRaw.get.asBytes().get)).flatMap {
                           partTicket =>
@@ -156,7 +153,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
           case Some(bucket) =>
             buckets.deleteFileHeader(BSONObjectID(id), filePath.get).flatMap {
               case true =>
-                s3Bucket.remove(s"${bucket.name}/${MD5.hex_digest(filePath.get)}").map {
+                s3Bucket.remove(bucket.physicalFilePath(filePath.get)).map {
                   _ => Ok
                 }
               case false => Future(NotFound(s"Couldn't find file at path '$filePath.get' in bucket '$id'"))

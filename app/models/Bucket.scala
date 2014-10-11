@@ -3,7 +3,6 @@ package models
 import lib.mongo.{Collection, SuperCollection}
 import lib.util.MD5
 import org.joda.time.DateTime
-import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, Writes}
 import reactivemongo.api.DefaultDB
@@ -49,6 +48,9 @@ case class Bucket(
                       version: Int = 0,
 	                    _id: BSONObjectID = BSONObjectID.generate
 	                  )
+{
+  def physicalFilePath(filePath: String) = s"${owner.stringify}/${MD5.hex_digest(name)}/${MD5.hex_digest(filePath)}"
+}
 
 object Bucket {
   import lib.util.Implicits._
