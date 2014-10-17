@@ -31,7 +31,6 @@ object User {
     def writes(model: User) = Json.obj(
       "_id" -> model._id.stringify,
       "email" -> model.email,
-      "password" -> model.password,
       "firstName" -> model.firstName,
       "lastName" -> model.lastName
     )
