@@ -1,7 +1,7 @@
 package models
 
 import lib.mongo.{Collection, SuperCollection}
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.{JsBoolean, Json, Writes}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
@@ -32,7 +32,11 @@ object User {
       "_id" -> model._id.stringify,
       "email" -> model.email,
       "firstName" -> model.firstName,
-      "lastName" -> model.lastName
+      "lastName" -> model.lastName,
+      "admin" -> (model.permission match {
+        case Administrator => true
+        case _ => false
+      })
     )
   }
 
