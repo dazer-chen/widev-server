@@ -114,6 +114,10 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
     ), upsert = true)
   }
 
+  def findByOwner(owner: BSONObjectID) = {
+    collection.find(BSONDocument("owner" -> owner)).cursor[Bucket].collect[List]()
+  }
+
   def findFileHeader(id: BSONObjectID, filePath: String): Future[Option[BucketFileHeader]] = {
     val filePathSum = MD5.hex_digest(filePath)
 

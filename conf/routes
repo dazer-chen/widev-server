@@ -31,6 +31,7 @@ GET     /buckets/:id                        controllers.BucketController.getBuck
 GET     /buckets/:id/files                  controllers.BucketController.listFiles(id: String)
 GET     /buckets/:id/file                   controllers.BucketController.getFile(id: String)
 POST    /buckets                            controllers.BucketController.createBucket
+GET     /buckets                            controllers.BucketController.getBuckets
 POST    /buckets/:id/file                   controllers.BucketController.uploadFile(id: String)
 DELETE  /buckets/:id/file                   controllers.BucketController.deleteFile(id: String)
 

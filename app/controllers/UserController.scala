@@ -3,7 +3,7 @@ package controllers
 import jp.t2v.lab.play2.auth.{AsyncAuth, LoginLogout, AuthElement}
 import lib.mongo.DuplicateModel
 import lib.play2auth.LoginSuccess
-import models.{Standard, User, Users}
+import models.{Buckets, Standard, User, Users}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads, JsPath, Json}
@@ -64,6 +64,7 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
       }
     )
   }
+
 }
 
 object UserController extends UserController(Users(ReactiveMongoPlugin.db)) with AuthConfigImpl

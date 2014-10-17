@@ -51,6 +51,12 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
       }
   }
 
+  def getBuckets = AsyncStack(AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+      buckets.findByOwner(user._id).map(bs => Ok(Json.toJson(bs)))
+  }
+
   def createBucket = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     request =>
       case class createBucket(name: String, owner: String)
@@ -226,6 +232,21 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
   /* -------- web socket handling -------- */
   case class MessageEnvelop[M](message: M, bytes: Option[Array[Byte]])
   case class InsertMessage(fd: String, sessionToken: String, at: Int)
+
+//  implicit object InsertMessageFormat extends Format[InsertMessage] {
+//    override def reads(json: JsValue): JsResult[InsertMessage] = (
+//      (JsPath \ "fd").read[String] and
+//        (JsPath \ "sessionToken").read[String] and
+//        (JsPath \ "at").read[String]
+//      )(InsertMessage.apply _)
+//
+//    override def writes(o: InsertMessage): JsValue =  Json.obj(
+//      "fd" -> o.fd,
+//      "sessionToken" -> o.sessionToken,
+//      "at" -> o.at
+//    )
+//  }
+
   case class RemoveMessage(fd: String, sessionToken: String, at: Int, length: Int)
   case class ReplaceMessage(fd: String, sessionToken: String, at: Int)
 
