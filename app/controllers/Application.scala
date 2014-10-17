@@ -1,9 +1,6 @@
 package controllers
 
-import java.nio.ByteBuffer
-
 import jp.t2v.lab.play2.auth.AuthElement
-import models._
 import play.api.libs.json.Json
 import play.api.mvc._
 
@@ -19,9 +16,5 @@ object Application extends Controller with AuthElement with AuthConfigImpl {
 
   def loginFail = Action {
     Ok(Json.obj("login" -> "fail"))
-  }
-
-  def AuthenticateTest = StackAction(AuthorityKey -> Visitor) { response =>
-    Ok("ok")
   }
 }

@@ -5,9 +5,6 @@
 # Migrations
 GET     /migrate                            controllers.Migration.run
 
-# Home page
-GET     /                                   controllers.Application.AuthenticateTest
-
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)
 
@@ -37,4 +34,4 @@ POST    /buckets                            controllers.BucketController.createB
 POST    /buckets/:id/file                   controllers.BucketController.uploadFile(id: String)
 DELETE  /buckets/:id/file                   controllers.BucketController.deleteFile(id: String)
 
-GET     /buckets/:id/file/open              controllers.BucketController.openFile(id: String)
+GET     /buckets/:id/file/open              controllers.BucketController.openFileCache(id: String)

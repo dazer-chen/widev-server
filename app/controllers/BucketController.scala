@@ -2,6 +2,7 @@ package controllers
 
 import java.nio.ByteBuffer
 
+import akka.util.ByteString
 import fly.play.aws.PlayConfiguration
 import fly.play.aws.auth.AwsCredentials
 import fly.play.s3._
@@ -223,6 +224,11 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
   }
 
   /* -------- web socket handling -------- */
+  case class MessageEnvelop[M](message: M, bytes: Option[Array[Byte]])
+  case class InsertMessage(fd: String, sessionToken: String, at: Int)
+  case class RemoveMessage(fd: String, sessionToken: String, at: Int, length: Int)
+  case class ReplaceMessage(fd: String, sessionToken: String, at: Int)
+
   val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[BSONObjectID, Channel[String]]
 
   def socket =
@@ -248,6 +254,24 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
 
         (in, out)
     }
+
+  private[controllers] def readMessage[M](bytes: Array[Byte])(implicit reader: Reads[M]): Option[MessageEnvelop[M]] = {
+    val headerSize = ByteBuffer.wrap(bytes.slice(0, 4)).getInt
+    val jsonObject = Json.parse(bytes.slice(4, headerSize))
+    reader.reads(jsonObject).asOpt match {
+      case Some(o) if bytes.size > headerSize + 4 =>
+        Some(MessageEnvelop(o, Some(bytes)))
+      case o => None
+    }
+  }
+
+  private[controllers] def writeMessage[M](message: M, bytes: Array[Byte])(implicit writer: Writes[M]): Option[Array[Byte]] = {
+    val jsonBytes = writer.writes(message).toString().getBytes
+    val headerSize = jsonBytes.size
+    val buffer = ByteBuffer.allocate(4)
+    buffer.putInt(headerSize)
+    Some(buffer.array ++ jsonBytes ++ bytes)
+  }
 
   private[controllers] def insertAndBroadCastToUsers(fd: String, userId: BSONObjectID, at: Int, bytes: Array[Byte]): Boolean = {
     FileCaches.insert(fd, userId, at, bytes) match {
