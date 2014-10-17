@@ -36,3 +36,5 @@ GET     /buckets/:id/file                   controllers.BucketController.getFile
 POST    /buckets                            controllers.BucketController.createBucket
 POST    /buckets/:id/file                   controllers.BucketController.uploadFile(id: String)
 DELETE  /buckets/:id/file                   controllers.BucketController.deleteFile(id: String)
+
+GET     /buckets/:id/file/open              controllers.BucketController.openFile(id: String)

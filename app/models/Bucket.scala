@@ -49,7 +49,7 @@ case class Bucket(
 	                    _id: BSONObjectID = BSONObjectID.generate
 	                  )
 {
-  def physicalFilePath(filePath: String) = s"${owner.stringify}/${MD5.hex_digest(name)}/${MD5.hex_digest(filePath)}"
+  def physicalFilePath(filePath: String) = s"${owner.stringify}/${_id.stringify}/${MD5.hex_digest(filePath)}"
 }
 
 object Bucket {
