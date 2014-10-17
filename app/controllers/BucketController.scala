@@ -222,40 +222,42 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
   }
 
   /* -------- web socket handling -------- */
-  case class MessageEnvelop[M](message: M, bytes: Option[Array[Byte]])
+  class MessageEnvelop[M <: Message](message: M, bytes: Option[Array[Byte]])
   object MessageEnvelop {
-    def apply(t: Int, bytes: Array[Byte]) = {
-      case 0 => InsertMessageFormat.reads(Json.parse(bytes))
-      case 1 => RemoveMessageFormat.reads(Json.parse(bytes))
-      case 2 => ReplaceMessageFormat.reads(Json.parse(bytes))
+    def read(t: Int, headerBytes: Array[Byte], bytes: Option[Array[Byte]]): Option[MessageEnvelop[Message]] = t match {
+      case 0 => Some(new MessageEnvelop(InsertMessageReads.reads(Json.parse(headerBytes)).get, bytes))
+      case 1 => Some(new MessageEnvelop(RemoveMessageReads.reads(Json.parse(headerBytes)).get, bytes))
+      case 2 => Some(new MessageEnvelop(ReplaceMessageReads.reads(Json.parse(headerBytes)).get, bytes))
+      case _ => None
     }
   }
 
-  case class InsertMessage(fd: String, sessionToken: String, at: Int)
-  implicit object InsertMessageFormat extends Format[InsertMessage] {
-    override def reads(json: JsValue): Reads[InsertMessage] = (
-      (JsPath \ "fd").read[String] and
-        (JsPath \ "sessionToken").read[String] and
-        (JsPath \ "at").read[Int]
-      )(InsertMessage.apply _)
+  trait Message
+  case class InsertMessage(fd: String, sessionToken: String, at: Int) extends Message
+  implicit val InsertMessageReads: Reads[InsertMessage] = (
+    (JsPath \ "fd").read[String] and
+      (JsPath \ "sessionToken").read[String] and
+      (JsPath \ "at").read[Int]
+    )(InsertMessage.apply _)
 
-    override def writes(o: InsertMessage) =  Json.obj(
+  implicit val InsertMessageWrites: Writes[InsertMessage] = new Writes[InsertMessage] {
+    override def writes(o: InsertMessage): JsValue = Json.obj(
       "fd" -> o.fd,
       "sessionToken" -> o.sessionToken,
       "at" -> o.at
     )
   }
 
-  case class RemoveMessage(fd: String, sessionToken: String, at: Int, length: Int)
-  implicit object RemoveMessageFormat extends Format[RemoveMessage] {
-    override def reads(json: JsValue): Reads[RemoveMessage] = (
-      (JsPath \ "fd").read[String] and
-        (JsPath \ "sessionToken").read[String] and
-        (JsPath \ "at").read[Int] and
-        (JsPath \ "length").read[Int]
-      )(RemoveMessage.apply _)
+  case class RemoveMessage(fd: String, sessionToken: String, at: Int, length: Int) extends Message
+  implicit val RemoveMessageReads: Reads[RemoveMessage] = (
+    (JsPath \ "fd").read[String] and
+      (JsPath \ "sessionToken").read[String] and
+      (JsPath \ "at").read[Int] and
+      (JsPath \ "length").read[Int]
+    )(RemoveMessage.apply _)
 
-    override def writes(o: RemoveMessage) =  Json.obj(
+  implicit val RemoveMessageWrites: Writes[RemoveMessage] = new Writes[RemoveMessage] {
+    override def writes(o: RemoveMessage): JsValue = Json.obj(
       "fd" -> o.fd,
       "sessionToken" -> o.sessionToken,
       "at" -> o.at,
@@ -263,31 +265,33 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
     )
   }
 
-  case class ReplaceMessage(fd: String, sessionToken: String, at: Int)
-  implicit object ReplaceMessageFormat extends Format[ReplaceMessage] {
-    override def reads(json: JsValue): Reads[ReplaceMessage] = (
-      (JsPath \ "fd").read[String] and
-        (JsPath \ "sessionToken").read[String] and
-        (JsPath \ "at").read[Int]
-      )(ReplaceMessage.apply _)
+  case class ReplaceMessage(fd: String, sessionToken: String, at: Int) extends Message
+  implicit val ReplaceMessageReads: Reads[ReplaceMessage] = (
+    (JsPath \ "fd").read[String] and
+      (JsPath \ "sessionToken").read[String] and
+      (JsPath \ "at").read[Int]
+    )(ReplaceMessage.apply _)
 
-    override def writes(o: ReplaceMessage) =  Json.obj(
+  implicit val ReplaceMessageWrites: Writes[ReplaceMessage] = new Writes[ReplaceMessage] {
+    override def writes(o: ReplaceMessage): JsValue = Json.obj(
       "fd" -> o.fd,
       "sessionToken" -> o.sessionToken,
       "at" -> o.at
     )
   }
 
-  val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[BSONObjectID, Channel[String]]
+  val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[BSONObjectID, Channel[Array[Byte]]]
 
   def socket =
-    WebSocket.using[String] {
+    WebSocket.using[Array[Byte]] {
       implicit request =>
-        val (out, channel) = Concurrent.broadcast[String]
+        val (out, channel) = Concurrent.broadcast[Array[Byte]]
 
-        val in = Iteratee.foreach[String] {
+        val in = Iteratee.foreach[Array[Byte]] {
           msg =>
-            channel.push(readMessage[ReplaceMessage]())
+//            val message = readMessage(msg)
+//            println(message)
+            channel.push(writeMessage(ReplaceMessage("toto", "toto", 1), "fefew".getBytes()).get)
         }
 
         StackAction(AuthorityKey -> Standard) {
@@ -304,14 +308,15 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
         (in, out)
     }
 
-  private[controllers] def readMessage[M](bytes: Array[Byte])(implicit reader: Reads[M]): Option[MessageEnvelop[M]] = {
+  private[controllers] def readMessage(bytes: Array[Byte]): Option[MessageEnvelop[Message]] = {
     val headerSize = ByteBuffer.wrap(bytes.slice(0, 4)).getInt
-    val jsonObject = Json.parse(bytes.slice(4, headerSize))
-    reader.reads(jsonObject).asOpt match {
-      case Some(o) if bytes.size > headerSize + 4 =>
-        Some(MessageEnvelop(o, Some(bytes)))
-      case o => None
-    }
+    val messageType = ByteBuffer.wrap(bytes.slice(4, 8)).getInt
+    val messageBytes = bytes.slice(8, headerSize)
+    MessageEnvelop.read(messageType, messageBytes, if (bytes.size > headerSize + 8)
+      Some(bytes.slice(headerSize + 8, bytes.size))
+    else
+      None
+    )
   }
 
   private[controllers] def writeMessage[M](message: M, bytes: Array[Byte])(implicit writer: Writes[M]): Option[Array[Byte]] = {
@@ -330,7 +335,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
           users.foreach {
             userId =>
               channelPerUser.get(userId) match {
-                case Some(channel) => channel.push(bytes.toString)
+                case Some(channel) => channel.push(bytes)
                 case None => Logger.debug(s"No channel for $userId, it must have been broken!")
               }
           }
@@ -348,7 +353,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
           users.foreach {
             userId =>
               channelPerUser.get(userId) match {
-                case Some(channel) => channel.push("delete") // TODO use message instead
+                case Some(channel) => channel.push("delete".getBytes()) // TODO use message instead
               }
           }
         }
