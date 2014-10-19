@@ -16,7 +16,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.iteratee.{Concurrent, Iteratee}
+import play.api.libs.iteratee.{Enumerator, Concurrent, Iteratee}
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.mvc.{BodyParsers, Controller, WebSocket}
@@ -278,6 +278,21 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
       "sessionToken" -> o.sessionToken,
       "at" -> o.at
     )
+  }
+
+  def socketTest =  WebSocket.using[String] { request =>
+
+    // Concurrent.broadcast returns (Enumerator, Concurrent.Channel)
+    val (out, channel) = Concurrent.broadcast[String]
+
+    // log the message to stdout and send response back to client
+    val in = Iteratee.foreach[String] {
+      msg => println(msg)
+        // the Enumerator returned by Concurrent.broadcast subscribes to the channel and will
+        // receive the pushed messages
+        channel push("I received your message: " + msg)
+    }
+    (in,out)
   }
 
   val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[BSONObjectID, Channel[Array[Byte]]]
