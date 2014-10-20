@@ -2,22 +2,20 @@ package controllers
 
 import java.nio.ByteBuffer
 
-import akka.util.ByteString
 import fly.play.aws.PlayConfiguration
 import fly.play.aws.auth.AwsCredentials
 import fly.play.s3._
 import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
 import lib.util.MD5
+import messages._
 import models.{Bucket, _}
 import org.joda.time.DateTime
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.functional.syntax._
 import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.iteratee.{Enumerator, Concurrent, Iteratee}
-import play.api.libs.json.Reads._
+import play.api.libs.iteratee.{Concurrent, Iteratee}
 import play.api.libs.json._
 import play.api.mvc.{BodyParsers, Controller, WebSocket}
 import play.modules.reactivemongo.ReactiveMongoPlugin
@@ -29,10 +27,8 @@ import scala.concurrent.Future
  * Created by thomastosoni on 8/31/14.
  */
 
-class BucketController(buckets: Buckets) extends Controller with AuthElement {
+class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends Controller with AuthElement {
   self: AuthConfigImpl =>
-
-  val s3Bucket = S3(PlayConfiguration("s3.bucket"))(AwsCredentials.fromConfiguration)
 
   private[controllers] def uploadFileToS3(bucket: Bucket, filePath: String, contentType: String, bytes: Array[Byte]): Future[Unit] =
     s3Bucket.initiateMultipartUpload(BucketFile(bucket.physicalFilePath(filePath), contentType)).flatMap {
@@ -222,79 +218,6 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
   }
 
   /* -------- web socket handling -------- */
-  class MessageEnvelop[M <: Message](message: M, bytes: Option[Array[Byte]])
-  object MessageEnvelop {
-    def read(t: Int, headerBytes: Array[Byte], bytes: Option[Array[Byte]]): Option[MessageEnvelop[Message]] = t match {
-      case 0 => Some(new MessageEnvelop(InsertMessageReads.reads(Json.parse(headerBytes)).get, bytes))
-      case 1 => Some(new MessageEnvelop(RemoveMessageReads.reads(Json.parse(headerBytes)).get, bytes))
-      case 2 => Some(new MessageEnvelop(ReplaceMessageReads.reads(Json.parse(headerBytes)).get, bytes))
-      case _ => None
-    }
-  }
-
-  trait Message
-  case class InsertMessage(fd: String, sessionToken: String, at: Int) extends Message
-  implicit val InsertMessageReads: Reads[InsertMessage] = (
-    (JsPath \ "fd").read[String] and
-      (JsPath \ "sessionToken").read[String] and
-      (JsPath \ "at").read[Int]
-    )(InsertMessage.apply _)
-
-  implicit val InsertMessageWrites: Writes[InsertMessage] = new Writes[InsertMessage] {
-    override def writes(o: InsertMessage): JsValue = Json.obj(
-      "fd" -> o.fd,
-      "sessionToken" -> o.sessionToken,
-      "at" -> o.at
-    )
-  }
-
-  case class RemoveMessage(fd: String, sessionToken: String, at: Int, length: Int) extends Message
-  implicit val RemoveMessageReads: Reads[RemoveMessage] = (
-    (JsPath \ "fd").read[String] and
-      (JsPath \ "sessionToken").read[String] and
-      (JsPath \ "at").read[Int] and
-      (JsPath \ "length").read[Int]
-    )(RemoveMessage.apply _)
-
-  implicit val RemoveMessageWrites: Writes[RemoveMessage] = new Writes[RemoveMessage] {
-    override def writes(o: RemoveMessage): JsValue = Json.obj(
-      "fd" -> o.fd,
-      "sessionToken" -> o.sessionToken,
-      "at" -> o.at,
-      "length" -> o.length
-    )
-  }
-
-  case class ReplaceMessage(fd: String, sessionToken: String, at: Int) extends Message
-  implicit val ReplaceMessageReads: Reads[ReplaceMessage] = (
-    (JsPath \ "fd").read[String] and
-      (JsPath \ "sessionToken").read[String] and
-      (JsPath \ "at").read[Int]
-    )(ReplaceMessage.apply _)
-
-  implicit val ReplaceMessageWrites: Writes[ReplaceMessage] = new Writes[ReplaceMessage] {
-    override def writes(o: ReplaceMessage): JsValue = Json.obj(
-      "fd" -> o.fd,
-      "sessionToken" -> o.sessionToken,
-      "at" -> o.at
-    )
-  }
-
-  def socketTest =  WebSocket.using[String] { request =>
-
-    // Concurrent.broadcast returns (Enumerator, Concurrent.Channel)
-    val (out, channel) = Concurrent.broadcast[String]
-
-    // log the message to stdout and send response back to client
-    val in = Iteratee.foreach[String] {
-      msg => println(msg)
-        // the Enumerator returned by Concurrent.broadcast subscribes to the channel and will
-        // receive the pushed messages
-        channel push("I received your message: " + msg)
-    }
-    (in,out)
-  }
-
   val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[BSONObjectID, Channel[Array[Byte]]]
 
   def socket =
@@ -323,10 +246,11 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
         (in, out)
     }
 
-  private[controllers] def readMessage(bytes: Array[Byte]): Option[MessageEnvelop[Message]] = {
+
+  private[controllers] def readMessage(bytes: Array[Byte]): Option[MessageEnvelop] = {
     val headerSize = ByteBuffer.wrap(bytes.slice(0, 4)).getInt
     val messageType = ByteBuffer.wrap(bytes.slice(4, 8)).getInt
-    val messageBytes = bytes.slice(8, headerSize)
+    val messageBytes = bytes.slice(8, headerSize + 8)
     MessageEnvelop.read(messageType, messageBytes, if (bytes.size > headerSize + 8)
       Some(bytes.slice(headerSize + 8, bytes.size))
     else
@@ -334,11 +258,12 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
     )
   }
 
-  private[controllers] def writeMessage[M](message: M, bytes: Array[Byte])(implicit writer: Writes[M]): Option[Array[Byte]] = {
+  private[controllers] def writeMessage[M <: Message](message: M, bytes: Array[Byte])(implicit writer: Writes[M]): Option[Array[Byte]] = {
     val jsonBytes = writer.writes(message).toString().getBytes
     val headerSize = jsonBytes.size
-    val buffer = ByteBuffer.allocate(4)
+    val buffer = ByteBuffer.allocate(8)
     buffer.putInt(headerSize)
+    buffer.putInt(message.typeValue)
     Some(buffer.array ++ jsonBytes ++ bytes)
   }
 
@@ -368,7 +293,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
           users.foreach {
             userId =>
               channelPerUser.get(userId) match {
-                case Some(channel) => channel.push("delete".getBytes()) // TODO use message instead
+                case Some(channel) => channel.push("delete".getBytes) // TODO use message instead
               }
           }
         }
@@ -380,4 +305,7 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
 
 }
 
-object BucketController extends BucketController(Buckets(ReactiveMongoPlugin.db)) with AuthConfigImpl
+object BucketController extends BucketController(
+  Buckets(ReactiveMongoPlugin.db),
+  S3(PlayConfiguration("s3.bucket"))(AwsCredentials.fromConfiguration)
+) with AuthConfigImpl

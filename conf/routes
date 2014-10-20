@@ -27,7 +27,6 @@ POST    /users                              controllers.UserController.createUse
 
 # Bucket
 GET     /buckets/ws                         controllers.BucketController.socket
-GET     /socket/test                        controllers.BucketController.socketTest
 GET     /buckets/:id                        controllers.BucketController.getBucket(id: String)
 GET     /buckets/:id/files                  controllers.BucketController.listFiles(id: String)
 GET     /buckets/:id/file                   controllers.BucketController.getFile(id: String)

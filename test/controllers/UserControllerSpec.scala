@@ -15,7 +15,6 @@ import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import reactivemongo.bson.BSONObjectID
-
 import scala.concurrent.Future
 
 /**
