@@ -38,6 +38,16 @@ object FileCaches {
     }
   }
 
+  def replace(fd: String, userId: BSONObjectID, at: Int, bytes: Array[Byte]): Boolean = collection.synchronized {
+    collection.get(fd) match {
+      case Some(file) if file.users.contains(userId) =>
+        file.bytes.remove(at, bytes.length)
+        file.bytes.insert(at, bytes:_*)
+        true
+      case _ => false
+    }
+  }
+
   def clear(fd: String, userId: BSONObjectID): Boolean = collection.synchronized {
     collection.get(fd) match {
       case Some(file) if file.users.contains(userId) =>

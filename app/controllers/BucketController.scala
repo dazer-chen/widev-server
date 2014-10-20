@@ -218,7 +218,7 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
   }
 
   /* -------- web socket handling -------- */
-  val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[BSONObjectID, Channel[Array[Byte]]]
+  val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[String, Channel[Array[Byte]]]
 
   def socket =
     WebSocket.using[Array[Byte]] {
@@ -226,10 +226,11 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
         val (out, channel) = Concurrent.broadcast[Array[Byte]]
 
         val in = Iteratee.foreach[Array[Byte]] {
-          msg =>
-//            val message = readMessage(msg)
-//            println(message)
-            channel.push(writeMessage(ReplaceMessage("toto", "toto", 1), "fefew".getBytes()).get)
+          bytes => readMessage(bytes) match {
+            case Some(envelop) =>
+              receiveMessage(envelop.message, envelop.bytes)
+            case None => Logger.debug(s"Received an invalid message")
+          }
         }
 
         StackAction(AuthorityKey -> Standard) {
@@ -237,7 +238,7 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
             val user = loggedIn
 
             channelPerUser.synchronized {
-              channelPerUser += (user._id -> channel)
+              channelPerUser += (user._id.stringify -> channel)
             }
 
             Ok
@@ -246,62 +247,61 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
         (in, out)
     }
 
-
-  private[controllers] def readMessage(bytes: Array[Byte]): Option[MessageEnvelop] = {
-    val headerSize = ByteBuffer.wrap(bytes.slice(0, 4)).getInt
-    val messageType = ByteBuffer.wrap(bytes.slice(4, 8)).getInt
-    val messageBytes = bytes.slice(8, headerSize + 8)
-    MessageEnvelop.read(messageType, messageBytes, if (bytes.size > headerSize + 8)
-      Some(bytes.slice(headerSize + 8, bytes.size))
+  private[controllers] def receiveMessage(message: FileAction, bytes: Option[Array[Byte]]): Unit =
+    if (message.sessionToken.nonEmpty)
+      idContainer.get(message.sessionToken.get) match {
+        case Some(userId) =>
+          message.action(BSONObjectID(userId), bytes, (message, bytes) =>
+            broadCastMessageToFileRoom(message, bytes, BSONObjectID(userId))
+          )
+        case None =>
+          Logger.warn(s"Unknown session token: '${message.sessionToken}'.")
+      }
     else
-      None
-    )
-  }
+      Logger.warn(s"Unhandled message")
 
-  private[controllers] def writeMessage[M <: Message](message: M, bytes: Array[Byte])(implicit writer: Writes[M]): Option[Array[Byte]] = {
-    val jsonBytes = writer.writes(message).toString().getBytes
-    val headerSize = jsonBytes.size
-    val buffer = ByteBuffer.allocate(8)
-    buffer.putInt(headerSize)
-    buffer.putInt(message.typeValue)
-    Some(buffer.array ++ jsonBytes ++ bytes)
-  }
-
-  private[controllers] def insertAndBroadCastToUsers(fd: String, userId: BSONObjectID, at: Int, bytes: Array[Byte]): Boolean = {
-    FileCaches.insert(fd, userId, at, bytes) match {
-      case true =>
-        val users = FileCaches.users(fd) - userId
+  private[controllers] def broadCastMessageToFileRoom(message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID) =
+    writeMessage(message, bytes) match {
+      case Some(bytesToSend) =>
         channelPerUser.synchronized {
-          users.foreach {
-            userId =>
-              channelPerUser.get(userId) match {
-                case Some(channel) => channel.push(bytes)
-                case None => Logger.debug(s"No channel for $userId, it must have been broken!")
-              }
+          (FileCaches.users(message.fd) - sender).foreach {
+            case id if channelPerUser.get(id.stringify).nonEmpty =>
+              channelPerUser(id.stringify).push(bytesToSend)
+            case id =>
+              Logger.warn(s"No openned channel for user: '$id'")
           }
         }
-        true
-      case false => false
+      case _ =>
+    }
+
+  private[controllers] def readMessage(bytes: Array[Byte]): Option[MessageEnvelop] =
+    try {
+      val headerSize = ByteBuffer.wrap(bytes.slice(0, 4)).getInt
+      val messageType = ByteBuffer.wrap(bytes.slice(4, 8)).getInt
+      val messageBytes = bytes.slice(8, headerSize + 8)
+      MessageEnvelop.read(messageType, messageBytes, if (bytes.size > headerSize + 8)
+        Some(bytes.slice(headerSize + 8, bytes.size))
+      else
+        None
+      )
+    } catch {
+      case e: Exception =>
+        Logger.error(e.getMessage, e.getCause)
+        None
+    }
+
+  private[controllers] def writeMessage(message: FileAction, bytes: Option[Array[Byte]]): Option[Array[Byte]] = {
+    MessageEnvelop.write(message) match {
+      case Some(json) =>
+        val jsonBytes = json.toString().getBytes
+        val headerSize = jsonBytes.size
+        val buffer = ByteBuffer.allocate(8)
+        buffer.putInt(headerSize)
+        buffer.putInt(message.typeValue)
+        Some(buffer.array ++ jsonBytes ++ (if (bytes.nonEmpty) bytes.get else Array.empty[Byte]))
+      case None => None
     }
   }
-
-  private[controllers] def removeAndBroadCastToUsers(fd: String, userId: BSONObjectID, at: Int, length: Int): Boolean = {
-    FileCaches.remove(fd, userId, at, length) match {
-      case true =>
-        val users = FileCaches.users(fd) - userId
-        channelPerUser.synchronized {
-          users.foreach {
-            userId =>
-              channelPerUser.get(userId) match {
-                case Some(channel) => channel.push("delete".getBytes) // TODO use message instead
-              }
-          }
-        }
-        true
-      case false => false
-    }
-  }
-
 
 }
 

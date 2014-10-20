@@ -29,15 +29,15 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
       "should write a message then parse it correctly" >> new WithFakeSessionApp(Standard) with MockFactory {
         import messages._
 
-        val insertMessage = InsertMessage(
+        val insertMessage = InsertFileAction(
           fd = BSONObjectID.generate.stringify,
-          sessionToken = BSONObjectID.generate.stringify,
+          sessionToken = Some(BSONObjectID.generate.stringify),
           at = 2
         )
 
         val bytes = BSONObjectID.generate.stringify.getBytes
 
-        val bytesResult = bucketController.writeMessage(insertMessage, bytes)
+        val bytesResult = bucketController.writeMessage(insertMessage, Some(bytes))
 
         (bytesResult should not).beNone
 
@@ -46,7 +46,7 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
         (messageResult should not).beNone
 
         messageResult.get.bytes should beSome(bytes)
-        messageResult.get.message should be equalTo(insertMessage)
+        messageResult.get.message should be equalTo insertMessage
       }
     }
 
