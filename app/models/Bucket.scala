@@ -42,6 +42,7 @@ object BucketFileHeader {
 case class Bucket(
 											name: String,
 											owner: BSONObjectID,
+											teams: List[BSONObjectID] = List.empty,
                       files: Map[String, BucketFileHeader] = Map.empty,
                       createdAt: DateTime = DateTime.now,
                       updatedAt: DateTime = DateTime.now,

@@ -3,36 +3,41 @@
 # ~~~~
 
 # Migrations
-GET     /migrate                            controllers.Migration.run
+GET           /migrate                              controllers.Migration.run
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file                       controllers.Assets.at(path="/public", file)
+GET           /assets/*file                         controllers.Assets.at(path="/public", file)
 
 # Oauth Github
-GET     /github/callback                    controllers.Authentication.githubCallback(code: String)
-GET     /github/signin                      controllers.Authentication.githubSigning
-GET     /github/authentication/success      controllers.Authentication.success(token_session: String)
-GET     /github/authentication/fail         controllers.Authentication.fail(token_session: String)
+GET           /github/callback                      controllers.Authentication.githubCallback(code: String)
+GET           /github/signin                        controllers.Authentication.githubSigning
+GET           /github/authentication/success        controllers.Authentication.success(token_session: String)
+GET           /github/authentication/fail           controllers.Authentication.fail(token_session: String)
 
 # OAuth2 provider
-POST    /oauth2/access_token                controllers.OAuth2ProviderController.accessToken
+POST          /oauth2/access_token                  controllers.OAuth2ProviderController.accessToken
 
 # Authentification routes
-POST    /authenticate                       controllers.Authentication.Authenticate
+POST          /authenticate                         controllers.Authentication.Authenticate
 
 #User Module
-GET     /users/current                      controllers.UserController.getCurrentUser
-GET     /users/:id                          controllers.UserController.getUser(id: String)
-POST    /users                              controllers.UserController.createUser
+GET           /users/current                        controllers.UserController.getCurrentUser
+GET           /users/:id                            controllers.UserController.getUser(id: String)
+POST          /users                                controllers.UserController.createUser
 
 # Bucket
-GET     /buckets/ws                         controllers.BucketController.socket
-GET     /buckets/:id                        controllers.BucketController.getBucket(id: String)
-GET     /buckets/:id/files                  controllers.BucketController.listFiles(id: String)
-GET     /buckets/:id/file                   controllers.BucketController.getFile(id: String)
-POST    /buckets                            controllers.BucketController.createBucket
-GET     /buckets                            controllers.BucketController.getBuckets
-POST    /buckets/:id/file                   controllers.BucketController.uploadFile(id: String)
-DELETE  /buckets/:id/file                   controllers.BucketController.deleteFile(id: String)
+GET           /buckets/ws                           controllers.BucketController.socket
+GET           /buckets/:id                          controllers.BucketController.getBucket(id: String)
+GET           /buckets/:id/files                    controllers.BucketController.listFiles(id: String)
+GET           /buckets/:id/file                     controllers.BucketController.getFile(id: String)
+POST          /buckets                              controllers.BucketController.createBucket
+GET           /buckets                              controllers.BucketController.getBuckets
+POST          /buckets/:id/file                     controllers.BucketController.uploadFile(id: String)
+DELETE        /buckets/:id/file                     controllers.BucketController.deleteFile(id: String)
 
-GET     /buckets/:id/file/open              controllers.BucketController.openFileCache(id: String)
+GET           /buckets/:id/file/open                controllers.BucketController.openFileCache(id: String)
+
+#Teams
+GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
+GET           /teams                                controllers.TeamController.getTeams
+POST          /teams                                controllers.TeamController.createTeam
