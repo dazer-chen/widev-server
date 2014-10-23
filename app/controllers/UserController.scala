@@ -28,6 +28,15 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
       }
   }
 
+	def getUsers = Action.async { request =>
+		val q = request.getQueryString("q")
+
+		if (q.isEmpty)
+			Future(BadRequest(s"'q' parameter required."))
+		else
+			users.findByQ(q.get).map(users => Ok(Json.toJson(users)))
+	}
+
   def getCurrentUser = optionalUserAction.async { user => implicit request =>
     user match {
       case Some(account) => Future(Ok(Json.toJson(user)))

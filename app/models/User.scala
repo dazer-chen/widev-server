@@ -56,6 +56,21 @@ case class Users(db: DefaultDB) extends Collection[User] {
 
   def generate: User = User.generate
 
+	def findByQ(q: String) = {
+		val filter = BSONDocument(
+			"email" -> 1,
+			"lastName" -> 1,
+			"firstName" -> 1,
+			"_id" -> 1
+		)
+
+		collection.find(
+			BSONDocument(
+				"email" -> BSONRegex("^" + q, "i")
+			)
+		).cursor[User].collect[List]()
+	}
+
   def find(email: String, password: String): Future[Option[User]] =
     collection.find(BSONDocument("email" -> email, "password" -> password)).one[User]
 }
