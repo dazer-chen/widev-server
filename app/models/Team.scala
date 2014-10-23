@@ -25,7 +25,8 @@ case class Team(
                 )
 
 object Team {
-  import lib.util.Implicits.BSONDateTimeHandler
+	import lib.util.Implicits._
+
   implicit val handler = Macros.handler[Team]
 
 	implicit val TeamWrites = new Writes[Team] {
