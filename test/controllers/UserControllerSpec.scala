@@ -96,14 +96,12 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
       "should return a success" >> new WithFakeSessionApp(Visitor) with MockFactory {
         usersMock.create(any[User]) returns Future(currentUser)
 
-        val json = Json.obj(
+        val body = Json.obj(
           "email" -> JsString(currentUser.email),
           "password" -> JsString(currentUser.password),
           "firstName" -> JsString(currentUser.firstName.getOrElse("")),
           "lastName" -> JsString(currentUser.lastName.getOrElse(""))
-        )
-
-        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\", \"firstName\": \"" + currentUser.firstName.getOrElse("") + "\", \"lastName\": \"" + currentUser.lastName.getOrElse("") + "\"}"
+        ).toString()
 
         val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
 
@@ -118,7 +116,13 @@ class UserControllerSpec extends mutable.Specification with Mockito with Util {
       "with a duplicate user, should return an error" >> new WithFakeSessionApp(Visitor) with MockFactory {
         usersMock.create(any[User]) returns Future.failed(new DuplicateModel("duplicate user"))
 
-        val body    = "{\"email\": \"" + currentUser.email + "\", \"password\": \"" + currentUser.password + "\", \"firstName\": \"" + currentUser.firstName.getOrElse("") + "\", \"lastName\": \"" + currentUser.lastName.getOrElse("") + "\"}"
+        val body = Json.obj(
+          "email" -> JsString(currentUser.email),
+          "password" -> JsString(currentUser.password),
+          "firstName" -> JsString(currentUser.firstName.getOrElse("")),
+          "lastName" -> JsString(currentUser.lastName.getOrElse(""))
+        ).toString()
+
         val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
 
         val result: Future[Result] = userController.createUser().apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
