@@ -8,6 +8,7 @@ import fly.play.s3._
 import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
 import lib.util.MD5
+import managers.BucketManager
 import messages._
 import models.{Bucket, _}
 import org.joda.time.DateTime
@@ -248,27 +249,19 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
   }
 
   /* -------- web socket handling -------- */
-  val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[String, Channel[Array[Byte]]]
 
   def socket =
     WebSocket.using[Array[Byte]] {
       implicit request =>
         val (out, channel) = Concurrent.broadcast[Array[Byte]]
-
-        val in = Iteratee.foreach[Array[Byte]] {
-          bytes => readMessage(bytes) match {
-            case Some(envelop) =>
-              receiveMessage(envelop.message, envelop.bytes)
-            case None => Logger.debug(s"Received an invalid message")
-          }
-        }
+        val in = Iteratee.foreach[Array[Byte]](receiveMessage)
 
         StackAction(AuthorityKey -> Standard) {
           implicit request =>
             val user = loggedIn
 
-            channelPerUser.synchronized {
-              channelPerUser += (user._id.stringify -> channel)
+            BucketManager.channelPerUser.synchronized {
+              BucketManager.channelPerUser += (user._id.stringify -> channel)
             }
 
             Ok
@@ -277,61 +270,22 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
         (in, out)
     }
 
-  private[controllers] def receiveMessage(message: FileAction, bytes: Option[Array[Byte]]): Unit =
-    if (message.sessionToken.nonEmpty)
-      idContainer.get(message.sessionToken.get) match {
-        case Some(userId) =>
-          message.action(BSONObjectID(userId), bytes, (message, bytes) =>
-            broadCastMessageToFileRoom(message, bytes, BSONObjectID(userId))
-          )
-        case None =>
-          Logger.warn(s"Unknown session token: '${message.sessionToken}'.")
-      }
-    else
-      Logger.warn(s"Unhandled message")
-
-  private[controllers] def broadCastMessageToFileRoom(message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID) =
-    writeMessage(message, bytes) match {
-      case Some(bytesToSend) =>
-        channelPerUser.synchronized {
-          (FileCaches.users(message.fd) - sender).foreach {
-            case id if channelPerUser.get(id.stringify).nonEmpty =>
-              channelPerUser(id.stringify).push(bytesToSend)
-            case id =>
-              Logger.warn(s"No openned channel for user: '$id'")
+  def receiveMessage(bytes: Array[Byte]): Unit =
+    BucketManager.readMessage(bytes) match {
+      case Some(envelop) =>
+        if (envelop.message.sessionToken.nonEmpty)
+          idContainer.get(envelop.message.sessionToken.get) match {
+            case Some(userId) =>
+              envelop.message.action(BSONObjectID(userId), envelop.bytes, (message, bytes) =>
+                BucketManager.broadCastMessageToFileRoom(message, bytes, BSONObjectID(userId))
+              )
+            case None =>
+              Logger.warn(s"Unknown session token: '${envelop.message.sessionToken}'.")
           }
-        }
-      case _ =>
+        else
+          Logger.warn(s"Unhandled message")
+      case None => Logger.debug(s"Received an invalid message")
     }
-
-  private[controllers] def readMessage(bytes: Array[Byte]): Option[MessageEnvelop] =
-    try {
-      val headerSize = ByteBuffer.wrap(bytes.slice(0, 4)).getInt
-      val messageType = ByteBuffer.wrap(bytes.slice(4, 8)).getInt
-      val messageBytes = bytes.slice(8, headerSize + 8)
-      MessageEnvelop.read(messageType, messageBytes, if (bytes.size > headerSize + 8)
-        Some(bytes.slice(headerSize + 8, bytes.size))
-      else
-        None
-      )
-    } catch {
-      case e: Exception =>
-        Logger.error(e.getMessage, e.getCause)
-        None
-    }
-
-  private[controllers] def writeMessage(message: FileAction, bytes: Option[Array[Byte]]): Option[Array[Byte]] = {
-    MessageEnvelop.write(message) match {
-      case Some(json) =>
-        val jsonBytes = json.toString().getBytes
-        val headerSize = jsonBytes.size
-        val buffer = ByteBuffer.allocate(8)
-        buffer.putInt(headerSize)
-        buffer.putInt(message.typeValue)
-        Some(buffer.array ++ jsonBytes ++ (if (bytes.nonEmpty) bytes.get else Array.empty[Byte]))
-      case None => None
-    }
-  }
 
 }
 

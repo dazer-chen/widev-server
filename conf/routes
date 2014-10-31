@@ -38,6 +38,7 @@ DELETE        /buckets/:id/file                     controllers.BucketController
 POST          /buckets/team                         controllers.BucketController.updateTeam
 
 GET           /buckets/:id/file/open                controllers.BucketController.openFileCache(id: String)
+PUT           /buckets/:id/file/:fd/close         controllers.BucketController.closeFileCache(id: String, fd: String)
 
 #Teams
 GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
