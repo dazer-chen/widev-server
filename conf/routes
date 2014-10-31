@@ -35,7 +35,7 @@ POST          /buckets                              controllers.BucketController
 GET           /buckets                              controllers.BucketController.getBuckets
 POST          /buckets/:id/file                     controllers.BucketController.uploadFile(id: String)
 DELETE        /buckets/:id/file                     controllers.BucketController.deleteFile(id: String)
-POST          /buckets/team                         controllers.BucketController.updateTeam
+PUT           /buckets/:id/teams                    controllers.BucketController.updateTeams(id: String)
 
 GET           /buckets/:id/file/open                controllers.BucketController.openFileCache(id: String)
 PUT           /buckets/:id/file/:fd/close         controllers.BucketController.closeFileCache(id: String, fd: String)

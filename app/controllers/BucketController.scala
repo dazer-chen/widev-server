@@ -56,27 +56,20 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
       buckets.findByOwner(user._id).map(bs => Ok(Json.toJson(bs)))
   }
 
-  def updateTeam = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+  def updateTeams(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     implicit request =>
       val user = loggedIn
 
-      case class updateTeam(id: String, team: Set[String])
+      implicit val updateTeamsReads: Reads[Set[String]] = (JsPath \ "teams").read[Set[String]]
 
-      implicit val createTeamReads: Reads[updateTeam] = (
-        (JsPath \ "id").read[String] and
-        (JsPath \ "teams").read[Set[String]]
-        )(updateTeam.apply _)
+      val teams = request.body.validate[Set[String]](updateTeamsReads)
 
-      val team = request.body.validate[updateTeam]
-
-      team.fold(
+      teams.fold(
         errors => {
           Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
         },
-        team => {
-          val user = loggedIn
-
-          buckets.updateTeam(BSONObjectID(team.id), team.team.map(BSONObjectID(_))).map {
+        teams => {
+          buckets.updateTeams(BSONObjectID(id), teams.map(BSONObjectID(_))).map {
             case true => Ok("")
             case false => BadRequest("")
           }

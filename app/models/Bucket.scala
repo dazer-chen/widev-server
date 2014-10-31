@@ -175,7 +175,7 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
   override def update(model: Bucket): Future[Boolean] =
     super.update(model.copy(updatedAt = DateTime.now(), version = model.version + 1))
 
-  def updateTeam(id: BSONObjectID, team: Set[BSONObjectID]): Future[Boolean] =
+  def updateTeams(id: BSONObjectID, team: Set[BSONObjectID]): Future[Boolean] =
     collection.update(BSONDocument("_id" -> id), BSONDocument(
       "$set" -> BSONDocument(
         "teams" -> team
