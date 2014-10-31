@@ -73,6 +73,7 @@ object Bucket {
 			"_id" -> model._id.stringify,
 			"name" -> model.name,
 			"owner" -> model.owner.stringify,
+      "teams" -> model.teams.map(_.stringify),
       "files" -> Json.arr(model.files.map {
         file => Json.toJsFieldJsValueWrapper(file._2)
       }.toSeq:_*),
@@ -173,4 +174,14 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
 
   override def update(model: Bucket): Future[Boolean] =
     super.update(model.copy(updatedAt = DateTime.now(), version = model.version + 1))
+
+  def updateTeam(id: BSONObjectID, team: Set[BSONObjectID]): Future[Boolean] =
+    collection.update(BSONDocument("_id" -> id), BSONDocument(
+      "$set" -> BSONDocument(
+        "teams" -> team
+      )
+    )).map {
+      case res if res.updated > 0 => true
+      case _ => false
+    }
 }

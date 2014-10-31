@@ -16,10 +16,12 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Concurrent.Channel
 import play.api.libs.iteratee.{Concurrent, Iteratee}
-import play.api.libs.json._
 import play.api.mvc.{BodyParsers, Controller, WebSocket}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
 
 import scala.concurrent.Future
 
@@ -51,6 +53,34 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
     implicit request =>
       val user = loggedIn
       buckets.findByOwner(user._id).map(bs => Ok(Json.toJson(bs)))
+  }
+
+  def updateTeam = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+
+      case class updateTeam(id: String, team: Set[String])
+
+      implicit val createTeamReads: Reads[updateTeam] = (
+        (JsPath \ "id").read[String] and
+        (JsPath \ "teams").read[Set[String]]
+        )(updateTeam.apply _)
+
+      val team = request.body.validate[updateTeam]
+
+      team.fold(
+        errors => {
+          Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+        },
+        team => {
+          val user = loggedIn
+
+          buckets.updateTeam(BSONObjectID(team.id), team.team.map(BSONObjectID(_))).map {
+            case true => Ok("")
+            case false => BadRequest("")
+          }
+        }
+      )
   }
 
   def createBucket = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
