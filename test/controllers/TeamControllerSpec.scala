@@ -1,5 +1,7 @@
 package controllers
 
+import play.api.http.HeaderNames
+
 import scala.concurrent.Future
 
 import lib.{FakeSession, Util, WithFakeSessionApp}
@@ -64,10 +66,7 @@ class TeamControllerSpec extends mutable.Specification with Mockito with Util {
       "should return a valid list of team if authentificated" >> new WithFakeSessionApp(Standard) with MockFactory {
         teamsMock.findByOwner(currentUser._id) returns Future(List(currentTeam))
 
-        val body = Json.obj(
-          "name" -> JsString(currentTeam.name),
-          "users" -> JsArray(currentTeam.users.map(user => JsString(user.stringify)).toSeq)
-        ).toString()
+        val body = ""
 
         val request = fakeRequest.withBody(body)
 
@@ -81,8 +80,22 @@ class TeamControllerSpec extends mutable.Specification with Mockito with Util {
 
     ".createTeam" >> {
       "create a team with some user should return the created team" >> new WithFakeSessionApp(Standard) with MockFactory {
-        teamsMock.create(currentTeam) returns Future(currentTeam)
+        val customTeam = Team(currentTeam.name, currentUser._id, currentTeam.users)
 
+        teamsMock.create(any[Team]) returns Future(customTeam)
+
+        val body = Json.obj(
+          "name" -> JsString(customTeam.name),
+          "users" -> JsArray(customTeam.users.map(user => JsString(user.stringify)).toSeq)
+        ).toString()
+
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result: Future[Result] = teamController.createTeam.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
+
+        contentType(result) must equalTo(Some("application/json"))
+
+        contentAsJson(result) must beEqualTo(Json.toJson(customTeam))
       }
     }
   }
