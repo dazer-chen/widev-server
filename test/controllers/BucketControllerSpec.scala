@@ -88,16 +88,6 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
       }
     }
 
-    ".writeMessage & .readMessage" >> {
-      "should write a message then parse it correctly" >> new WithFakeSessionApp(Standard) with MockFactory {
-        import messages._
-
-        val insertMessage = InsertFileAction(
-          fd = BSONObjectID.generate.stringify,
-          sessionToken = Some(BSONObjectID.generate.stringify),
-          at = 2
-        )
-
 //    ".writeMessage & .readMessage" >> {
 //      "should write a message then parse it correctly" >> new WithFakeSessionApp(Standard) with MockFactory {
 //        import messages._

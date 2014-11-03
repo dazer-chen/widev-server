@@ -40,7 +40,7 @@ PUT           /buckets/:id/teams/add                controllers.BucketController
 PUT           /buckets/:id/teams/remove             controllers.BucketController.removeTeam(id: String)
 
 GET           /buckets/:id/file/open                controllers.BucketController.openFileCache(id: String)
-PUT           /buckets/:id/file/:fd/close         controllers.BucketController.closeFileCache(id: String, fd: String)
+PUT           /buckets/:id/file/:fd/close           controllers.BucketController.closeFileCache(id: String, fd: String)
 
 #Teams
 GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
