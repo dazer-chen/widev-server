@@ -1,20 +1,18 @@
 package controllers
 
-import jp.t2v.lab.play2.auth.LoginLogout
+import org.mindrot.jbcrypt.BCrypt
+
+import scala.concurrent.Future
+
 import lib.oauth.GithubOauth2
 import lib.play2auth.LoginSuccess
 import models.{JsonError, JsonFormat, Users}
-import play.api.Logger
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsError, JsPath, Json, Reads}
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoPlugin}
-
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-
 
 /**
  * Created by gaetansenn on 26/07/2014.
@@ -70,9 +68,13 @@ class Authentication(users: Users) extends Controller with MongoController with 
         Future.successful(BadRequest(JsonFormat.generateError(JsonError(1234, "", "BadRequest", BAD_REQUEST, "Please refer to the documentation", JsError.toFlatJson(errors).toString(), None))))
       },
       login => {
-        users.find(login.email, login.password).flatMap {
+        users.find(login.email).flatMap {
           case Some(u) => {
-            gotoLoginSucceeded(u._id.stringify)(request, defaultContext)
+            if (BCrypt.checkpw(login.password,u.password)) {
+              gotoLoginSucceeded(u._id.stringify)(request, defaultContext)
+            } else {
+              Future(BadRequest(Json.obj("status" -> "KO", "message" -> "unknown login or password")))
+            }
           }
           case _ => Future.successful(BadRequest(Json.obj("status" -> "KO", "message" -> "unknown login or password")))
         }

@@ -1,6 +1,7 @@
 package models
 
 import lib.mongo.{Collection, SuperCollection}
+import org.mindrot.jbcrypt.BCrypt
 import play.api.libs.json.{JsBoolean, Json, Writes}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
@@ -64,6 +65,6 @@ case class Users(db: DefaultDB) extends Collection[User] {
 		).cursor[User].collect[List](10)
 	}
 
-  def find(email: String, password: String): Future[Option[User]] =
-    collection.find(BSONDocument("email" -> email, "password" -> password)).one[User]
+  def find(email: String): Future[Option[User]] =
+    collection.find(BSONDocument("email" -> email)).one[User]
 }

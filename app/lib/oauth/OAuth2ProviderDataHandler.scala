@@ -2,6 +2,7 @@ package lib.oauth
 
 import lib.util.Crypto
 import models._
+import org.mindrot.jbcrypt.BCrypt
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.{Future, ExecutionContext, Await}
@@ -25,7 +26,14 @@ case class OAuth2ProviderDataHandler(
     Await.result(clients.validate(BSONObjectID(clientId), clientSecret, GrandType(grantType)), timeout)
 
   def findUser(username: String, password: String): Option[User] =
-    Await.result(users.find(username, password), timeout)
+    Await.result(users.find(username).map {
+      case Some(u) => if (BCrypt.checkpw(password, u.password)) {
+        Some(u)
+      } else {
+        None
+      }
+      case _ => None
+    }, timeout)
 
   def createAccessToken(authInfo: AuthInfo[User]): AccessToken = {
     val token = models.AccessToken(

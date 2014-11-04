@@ -8,6 +8,7 @@ import jp.t2v.lab.play2.auth._
 import lib.{Util, WithFakeApp}
 import models.{User, Users}
 import org.junit.runner.RunWith
+import org.mindrot.jbcrypt.BCrypt
 import org.mockito.Mockito._
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
@@ -17,6 +18,7 @@ import play.api.libs.iteratee.Input
 import play.api.mvc.{RequestHeader, Result}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -44,12 +46,14 @@ class AuthenticationSpec extends Specification with Mockito with Util {
 
     "Should redirect to success when authentication success" >> new WithFakeApp {
       val userMock = mock[Users]
-      val user = User.generate
+      var user = User.generate
+      val plainPassword = user.password
+      user = user.copy(password = BCrypt.hashpw(plainPassword, BCrypt.gensalt()))
 
-      when(userMock.find(any[String], any[String])).thenReturn(Future(Some(user)))
+      when(userMock.find(any[String])).thenReturn(Future(Some(user)))
       class MockedAuthentication extends Authentication(userMock) with authMock
       val controller = spy(new MockedAuthentication)
-      val body    = "{\"email\": \"" + user.email + "\", \"password\": \"" + user.password + "\" }"
+      val body    = "{\"email\": \"" + user.email + "\", \"password\": \"" + plainPassword + "\" }"
       val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       val res: Future[Result] = controller.Authenticate.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
       status(res) must equalTo(OK)
@@ -58,12 +62,14 @@ class AuthenticationSpec extends Specification with Mockito with Util {
 
     "Should return a 400 when authentication fail" >> new WithFakeApp {
       val userMock = mock[Users]
-      val user = User.generate
+      var user = User.generate
+      val plainPassword = user.password
+      user = user.copy(password = BCrypt.hashpw(plainPassword, BCrypt.gensalt()))
 
-      when(userMock.find(any[String], any[String])).thenReturn(Future(None))
+      when(userMock.find(any[String])).thenReturn(Future(None))
       class MockedAuthentication extends Authentication(userMock) with authMock
       val controller = spy(new MockedAuthentication)
-      val body    = "{\"login\": \"" + user.email + "\", \"password\": \"" + user.password + "\" }"
+      val body    = "{\"login\": \"" + user.email + "\", \"password\": \"" + plainPassword + "\" }"
       val request = FakeRequest().withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       val res: Future[Result] = controller.Authenticate.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
       status(res) must equalTo(BAD_REQUEST)

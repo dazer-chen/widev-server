@@ -4,6 +4,7 @@ import jp.t2v.lab.play2.auth.{AsyncAuth, LoginLogout, AuthElement}
 import lib.mongo.DuplicateModel
 import lib.play2auth.LoginSuccess
 import models.{Buckets, Standard, User, Users}
+import org.mindrot.jbcrypt.BCrypt
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads, JsPath, Json}
@@ -11,6 +12,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.functional.syntax._
+import com.github.t3hnar.bcrypt
 
 import scala.concurrent.Future
 
@@ -63,8 +65,7 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
         Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
       },
       user => {
-
-        users.create(User(user.email, user.password, firstName = user.firstName, lastName = user.lastName)).flatMap {
+        users.create(User(user.email, BCrypt.hashpw(user.password, BCrypt.gensalt()), firstName = user.firstName, lastName = user.lastName)).flatMap {
           user => gotoLoginSucceeded(user._id.stringify)(request, defaultContext)
         } recover {
           case err: DuplicateModel =>

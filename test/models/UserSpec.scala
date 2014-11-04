@@ -23,7 +23,7 @@ class UserSpec extends Specification with Mongo with lib.Util {
       result(users.create(user))
 
       "with username and password" >> {
-        result(users.find(user.email, user.password)).get should equalTo(user)
+        result(users.find(user.email)).get should equalTo(user)
       }
     }
 
