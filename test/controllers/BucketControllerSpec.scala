@@ -39,16 +39,15 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 
     ".updateTeam" >> {
       "shouw update the team of a specific bucket" >> new WithFakeSessionApp(Standard) with MockFactory {
-        bucketsMock.updateTeam(customBucket._id, customBucket.teams.toSet) returns Future(true)
+        bucketsMock.updateTeams(customBucket._id, customBucket.teams.toSet) returns Future(true)
 
         val body = Json.obj(
-          "id" -> JsString(customBucket._id.stringify),
           "teams" -> JsArray(customBucket.teams.map(team => JsString(team.stringify)).toSeq)
         ).toString()
 
         val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
 
-        val result: Future[Result] = bucketController.updateTeam.apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
+        val result: Future[Result] = bucketController.updateTeams(customBucket._id.stringify).apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
 
         status(result) must equalTo(OK)
       }
@@ -86,24 +85,24 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 //
 //        messageResult.get.bytes should beSome(bytes)
 //        messageResult.get.message should be equalTo insertMessage
-//      }
-//    }
-
-    ".receiveMessage" >> {
-      "should receive a message execute its associated action" >> new WithFakeSessionApp(Standard) with MockFactory {
-        import messages._
-
-        val insertMessageMock = mock[FileAction]
-        bucketManagerMock.readMessage(any[Array[Byte]]) returns Some(new MessageEnvelop(insertMessageMock, None))
-        insertMessageMock.action(any[BSONObjectID], any[Option[Array[Byte]]], any[((FileAction, Option[Array[Byte]]) => Unit)])
-
-        val bytes = Array[Byte]()
-        bucketController.receiveMessage(bytes)
-
-        there was one(bucketManagerMock).readMessage(any[Array[Byte]])
-        there was one(insertMessageMock).action(currentUser._id, Some(bytes), any[((FileAction, Option[Array[Byte]]) => Unit)])
       }
     }
+//
+//    ".receiveMessage" >> {
+//      "should receive a message execute its associated action" >> new WithFakeSessionApp(Standard) with MockFactory {
+//        import messages._
+//
+//        val insertMessageMock = mock[FileAction]
+//        bucketManagerMock.readMessage(any[Array[Byte]]) returns Some(new MessageEnvelop(insertMessageMock, None))
+//        insertMessageMock.action(any[BSONObjectID], any[Option[Array[Byte]]], any[((FileAction, Option[Array[Byte]]) => Unit)])
+//
+//        val bytes = Array[Byte]()
+//        bucketController.receiveMessage(bytes)
+//
+//        there was one(bucketManagerMock).readMessage(any[Array[Byte]])
+//        there was one(insertMessageMock).action(currentUser._id, Some(bytes), any[((FileAction, Option[Array[Byte]]) => Unit)])
+//      }
+//    }
 
 //    ".broadCastMessageToFileRoom" >> {
 //      "should receive a message and send it to every clients who opened the same file" >> new WithFakeSessionApp(Standard) with MockFactory {
