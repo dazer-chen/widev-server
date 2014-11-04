@@ -60,16 +60,14 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
     implicit request =>
       val user = loggedIn
 
-      implicit val updateTeamsReads: Reads[Set[String]] = (JsPath \ "teams").read[Set[String]]
-
-      val teams = request.body.validate[Set[String]](updateTeamsReads)
+      val teams = (request.body \ "teams").validate[Seq[String]]
 
       teams.fold(
         errors => {
           Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
         },
         teams => {
-          buckets.updateTeams(BSONObjectID(id), teams.map(BSONObjectID(_))).map {
+          buckets.updateTeams(BSONObjectID(id), teams.map(BSONObjectID(_)).toSet).map {
             case true => Ok("")
             case false => BadRequest("")
           }
