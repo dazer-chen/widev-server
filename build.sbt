@@ -26,5 +26,6 @@ libraryDependencies ++= Seq(
   "jp.t2v" %% "play2-auth" % "0.12.0",
   "jp.t2v" %% "play2-auth-test" % "0.12.0" % "test",
   "nl.rhinofly" %% "play-s3" % "5.0.0",
-  "com.etaty.rediscala" %% "rediscala" % "1.4.0"
+  "com.etaty.rediscala" %% "rediscala" % "1.4.0",
+  "org.mindrot" % "jbcrypt" % "0.3m"
 )
