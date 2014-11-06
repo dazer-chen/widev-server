@@ -12,7 +12,6 @@ import play.api.mvc._
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.functional.syntax._
-import com.github.t3hnar.bcrypt
 
 import scala.concurrent.Future
 
