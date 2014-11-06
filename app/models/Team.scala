@@ -55,6 +55,34 @@ case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
 
   def generate: Team = Team.generate
 
+  def addUser(teamId: BSONObjectID, userId: BSONObjectID): Future[Boolean] = {
+    collection.update(BSONDocument("_id" -> teamId), BSONDocument(
+      "$addToSet" -> BSONDocument(
+        "users" ->
+          userId
+      )
+    )).map {
+      case (updated) => {
+        true
+      }
+      case _ => false
+    }
+  }
+
+  def removeUser(teamId: BSONObjectID, userId: BSONObjectID): Future[Boolean] = {
+    collection.update(BSONDocument("_id" -> teamId), BSONDocument(
+      "$pull" -> BSONDocument(
+        "users" ->
+          userId
+      )
+    )).map {
+      case (updated) => {
+        true
+      }
+      case _ => false
+    }
+  }
+
 	def find(name: String, owner: BSONObjectID): Future[Option[Team]] =
 		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Team]
 

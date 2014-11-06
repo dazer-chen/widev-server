@@ -1,8 +1,10 @@
 package controllers
 
+import scala.concurrent.Future
+
 import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
-import models.{Team, _}
+import models._
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -10,8 +12,6 @@ import play.api.libs.json._
 import play.api.mvc.{BodyParsers, Controller}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
-
-import scala.concurrent.Future
 
 /**
  * Created by benjamincanac on 23/10/2014.
@@ -32,6 +32,40 @@ class TeamController(teams: Teams) extends Controller with AuthElement {
 			val user = loggedIn
 			teams.findByOwner(user._id).map(team => Ok(Json.toJson(team)))
 	}
+
+  def addUser(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      val user = (request.body \ "user").validate[String]
+
+      user.fold(
+        errors => {
+          Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+        },
+        user => {
+          teams.addUser(BSONObjectID.apply(id), BSONObjectID.apply(user)).map {
+            case true => Ok("")
+            case false => BadRequest("")
+          }
+        }
+      )
+  }
+
+  def removeUser(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      val user = (request.body \ "user").validate[String]
+
+      user.fold(
+        errors => {
+          Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+        },
+        user => {
+          teams.removeUser(BSONObjectID.apply(id), BSONObjectID.apply(user)).map {
+            case true => Ok("")
+            case false => BadRequest("")
+          }
+        }
+      )
+  }
 
 	def createTeam = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
 		implicit request =>

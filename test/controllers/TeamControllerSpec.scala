@@ -62,6 +62,38 @@ class TeamControllerSpec extends mutable.Specification with Mockito with Util {
       }
     }
 
+    ".addUser" >> {
+      "add an user to a specific team" >> new WithFakeSessionApp(Standard) with MockFactory {
+        teamsMock.addUser(currentTeam._id, userTeam._id) returns Future(true)
+
+        val body = Json.obj(
+          "user" -> JsString(userTeam._id.stringify)
+        ).toString()
+
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result: Future[Result] = teamController.addUser(currentTeam._id.stringify).apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
+
+        status(result) must equalTo(OK)
+      }
+    }
+
+    ".removeUser" >> {
+      "remove an user to a specific team" >> new WithFakeSessionApp(Standard) with MockFactory {
+        teamsMock.removeUser(currentTeam._id, userTeam._id) returns Future(true)
+
+        val body = Json.obj(
+          "user" -> JsString(userTeam._id.stringify)
+        ).toString()
+
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result: Future[Result] = teamController.removeUser(currentTeam._id.stringify).apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
+
+        status(result) must equalTo(OK)
+      }
+    }
+
     ".getTeams" >> {
       "should return a valid list of team if authentificated" >> new WithFakeSessionApp(Standard) with MockFactory {
         teamsMock.findByOwner(currentUser._id) returns Future(List(currentTeam))
