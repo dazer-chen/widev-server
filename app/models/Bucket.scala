@@ -42,7 +42,7 @@ object BucketFileHeader {
 case class Bucket(
 											name: String,
 											owner: BSONObjectID,
-											teams: List[BSONObjectID] = List.empty,
+											teams: Set[BSONObjectID] = Set.empty,
                       files: Map[String, BucketFileHeader] = Map.empty,
                       createdAt: DateTime = DateTime.now,
                       updatedAt: DateTime = DateTime.now,
@@ -85,8 +85,9 @@ object Bucket {
 
 	def generate = Bucket(
 		name = BSONObjectID.generate.stringify,
-		owner = BSONObjectID.generate
-	)
+		owner = BSONObjectID.generate,
+    teams = Set((0 to 10).map(_ => BSONObjectID.generate):_*)
+  )
 }
 
 case class Buckets(db: DefaultDB) extends Collection[Bucket] {
@@ -141,6 +142,30 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
           case _ => None
         }
       case _ => None
+    }
+  }
+
+  def addTeam(bucketId: BSONObjectID, teamId: BSONObjectID): Future[Boolean] = {
+    collection.update(BSONDocument("_id" -> bucketId), BSONDocument(
+      "$addToSet" -> BSONDocument(
+        "teams" ->
+          teamId
+      )
+    )).map {
+      case some => true
+      case _ => false
+    }
+  }
+
+  def removeTeam(bucketId: BSONObjectID, teamId: BSONObjectID): Future[Boolean] = {
+    collection.update(BSONDocument("_id" -> bucketId), BSONDocument(
+      "$pull" -> BSONDocument(
+        "teams" ->
+          teamId
+      )
+    )).map {
+      case some => true
+      case _ => false
     }
   }
 

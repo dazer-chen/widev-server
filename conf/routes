@@ -36,6 +36,8 @@ GET           /buckets                              controllers.BucketController
 POST          /buckets/:id/file                     controllers.BucketController.uploadFile(id: String)
 DELETE        /buckets/:id/file                     controllers.BucketController.deleteFile(id: String)
 PUT           /buckets/:id/teams                    controllers.BucketController.updateTeams(id: String)
+PUT           /buckets/:id/teams/add                controllers.BucketController.addTeam(id: String)
+PUT           /buckets/:id/teams/remove             controllers.BucketController.removeTeam(id: String)
 
 GET           /buckets/:id/file/open                controllers.BucketController.openFileCache(id: String)
 PUT           /buckets/:id/file/:fd/close         controllers.BucketController.closeFileCache(id: String, fd: String)
@@ -44,3 +46,5 @@ PUT           /buckets/:id/file/:fd/close         controllers.BucketController.c
 GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
 GET           /teams                                controllers.TeamController.getTeams
 POST          /teams                                controllers.TeamController.createTeam
+PUT           /teams/:id/add                        controllers.TeamController.addUser(id: String)
+PUT           /teams/:id/remove                     controllers.TeamController.removeUser(id: String)

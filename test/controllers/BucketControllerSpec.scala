@@ -33,9 +33,44 @@ class BucketControllerSpec extends mutable.Specification with Mockito with Util 
 
     val bucketController = new BucketController(bucketsMock, s3BucketMock) with AuthConfigMock
     val customBucket = Bucket.generate
+    val customTeam = Team.generate
   }
 
   "BucketController" should {
+
+    ".addTeam" >> {
+      "add a team to a specific bucket" >> new WithFakeSessionApp(Standard) with MockFactory {
+        bucketsMock.addTeam(customBucket._id, customTeam._id) returns Future(true)
+        bucketsMock.find(customBucket._id) returns Future(Some(customBucket))
+
+        val body = Json.obj(
+        "team" -> JsString(customTeam._id.stringify)
+        ).toString()
+
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result: Future[Result] = bucketController.addTeam(customBucket._id.stringify).apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
+
+        status(result) must equalTo(OK)
+      }
+    }
+
+    ".removeTeam" >> {
+      "remove a team to a specific bucket" >> new WithFakeSessionApp(Standard) with MockFactory {
+        bucketsMock.removeTeam(customBucket._id, customTeam._id) returns Future(true)
+        bucketsMock.find(customBucket._id) returns Future(Some(customBucket))
+
+        val body = Json.obj(
+          "team" -> JsString(customTeam._id.stringify)
+        ).toString()
+
+        val request = fakeRequest.withBody(body).withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+
+        val result: Future[Result] = bucketController.removeTeam(customBucket._id.stringify).apply(request).feed(Input.El(body.getBytes)).flatMap(_.run)
+
+        status(result) must equalTo(OK)
+      }
+    }
 
     ".updateTeam" >> {
       "shouw update the team of a specific bucket" >> new WithFakeSessionApp(Standard) with MockFactory {

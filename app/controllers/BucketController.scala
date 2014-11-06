@@ -75,6 +75,54 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
       )
   }
 
+  def addTeam(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+      buckets.find(BSONObjectID.apply(id)).flatMap {
+        case Some(bucket) => {
+          val team = (request.body \ "team").validate[String]
+
+          team.fold(
+            errors => {
+              Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+            },
+            team => {
+              buckets.addTeam(BSONObjectID.apply(id), BSONObjectID.apply(team)).map {
+                case true => Ok("")
+                case _ => BadRequest(s"Unable to add the team $team")
+              }
+            }
+          )
+        }
+        case None => Future(NotFound(s"Bucket $id not found"))
+      }
+  }
+
+  def removeTeam(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+      buckets.find(BSONObjectID.apply(id)).flatMap {
+        case Some(bucket) => {
+          val team = (request.body \ "team").validate[String]
+
+          team.fold(
+            errors => {
+              Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+            },
+            team => {
+              buckets.removeTeam(BSONObjectID.apply(id), BSONObjectID.apply(team)).map {
+                case true => Ok("")
+                case _ => BadRequest(s"Unable to remove the team $team")
+              }
+            }
+          )
+        }
+        case None => Future(NotFound(s"Bucket $id not found"))
+      }
+  }
+
+
+
   def createBucket = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     implicit request =>
       val bucketName = request.getQueryString("name")

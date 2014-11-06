@@ -14,4 +14,5 @@ case class Factory(db: DefaultDB)(implicit ec: ExecutionContext) {
   lazy val users = Users(db)
 	lazy val session = Sessions(db)
 	lazy val buckets = Buckets(db)
+  lazy val teams = Teams(db)
 }
