@@ -8,7 +8,8 @@ scalaVersion := "2.11.2"
 
 resolvers ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-  "rediscala" at "http://dl.bintray.com/etaty/maven"
+  "rediscala" at "http://dl.bintray.com/etaty/maven",
+  "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
 )
 
 libraryDependencies ++= Seq(
