@@ -10,6 +10,12 @@ object Crypto {
     val key = java.util.UUID.randomUUID.toString
     new sun.misc.BASE64Encoder().encode(key.getBytes)
   }
+
+  def verifyHmac(token: String) = {
+    val (hmac, value) = token.splitAt(40)
+    if (play.api.libs.Crypto.sign(value) == hmac) Some(value) else None
+  }
+
 }
 
 object BearerTokenGenerator {

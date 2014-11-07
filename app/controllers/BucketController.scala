@@ -5,9 +5,9 @@ import java.nio.ByteBuffer
 import fly.play.aws.PlayConfiguration
 import fly.play.aws.auth.AwsCredentials
 import fly.play.s3._
-import jp.t2v.lab.play2.auth.AuthElement
+import jp.t2v.lab.play2.auth.{AsyncAuth, CookieUtil, AuthElement}
 import lib.mongo.DuplicateModel
-import lib.util.MD5
+import lib.util.{Crypto, MD5}
 import managers.BucketManager
 import messages._
 import models.{Bucket, _}
@@ -30,7 +30,7 @@ import scala.concurrent.Future
  * Created by thomastosoni on 8/31/14.
  */
 
-class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends Controller with AuthElement {
+class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends Controller with AuthElement with AsyncAuth {
   self: AuthConfigImpl =>
 
   private[controllers] def uploadFileToS3(bucket: Bucket, filePath: String, contentType: String, bytes: Array[Byte]): Future[Unit] =
@@ -289,40 +289,55 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
 
   /* -------- web socket handling -------- */
 
-  def socket =
-    WebSocket.using[Array[Byte]] {
-      implicit request =>
-        val (out, channel) = Concurrent.broadcast[Array[Byte]]
-        val in = Iteratee.foreach[Array[Byte]](receiveMessage)
-
-        StackAction(AuthorityKey -> Standard) {
-          implicit request =>
-            val user = loggedIn
-
-            BucketManager.channelPerUser.synchronized {
-              BucketManager.channelPerUser += (user._id.stringify -> channel)
-            }
-
-            Ok
+  def socket = WebSocket.tryAccept[Array[Byte]] {
+    implicit request =>
+      Future {
+        val tokenValue = request.getQueryString("sessionToken") match {
+          case Some(token) => Crypto.verifyHmac(token)
+          case _ => None
         }
+        tokenValue match {
+          case Some(token) =>
+            idContainer.get(token) match {
+              case Some(userId) =>
+                val (out, channel) = Concurrent.broadcast[Array[Byte]]
+                val in = Iteratee.foreach[Array[Byte]](receiveMessage)
 
-        (in, out)
-    }
+                BucketManager.channelPerUser.synchronized {
+                  BucketManager.channelPerUser += (userId -> channel)
+                }
+
+                Right((in, out))
+              case None => Left(NotFound(s"Session not found"))
+            }
+          case None => Left(NotAcceptable(s"Received an invalid message"))
+        }
+      }
+  }
 
   def receiveMessage(bytes: Array[Byte]): Unit =
     BucketManager.readMessage(bytes) match {
       case Some(envelop) =>
-        if (envelop.message.sessionToken.nonEmpty)
-          idContainer.get(envelop.message.sessionToken.get) match {
-            case Some(userId) =>
-              envelop.message.action(BSONObjectID(userId), envelop.bytes, (message, bytes) =>
-                BucketManager.broadCastMessageToFileRoom(message, bytes, BSONObjectID(userId))
-              )
-            case None =>
-              Logger.warn(s"Unknown session token: '${envelop.message.sessionToken}'.")
-          }
-        else
-          Logger.warn(s"Unhandled message")
+        Logger.debug(s"received: $envelop")
+
+        val tokenValue = envelop.message.sessionToken match {
+          case Some(token) => Crypto.verifyHmac(token)
+          case _ => None
+        }
+
+        tokenValue match {
+          case Some(token) =>
+            idContainer.get(token) match {
+              case Some(userId) =>
+                envelop.message.action(BSONObjectID(userId), envelop.bytes, (message, bytes) =>
+                  BucketManager.broadCastMessageToFileRoom(message, bytes, BSONObjectID(userId))
+                )
+              case None =>
+                Logger.warn(s"Unknown session token: '${envelop.message.sessionToken.get}'.")
+            }
+          case None =>
+            Logger.warn(s"Unhandled message")
+        }
       case None => Logger.debug(s"Received an invalid message")
     }
 

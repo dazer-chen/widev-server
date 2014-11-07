@@ -1,11 +1,13 @@
 package managers
 
-import java.nio.ByteBuffer
+import java.nio.{ByteOrder, ByteBuffer}
+import java.nio.charset.Charset
 
 import messages.{FileAction, MessageEnvelop}
 import models.FileCaches
 import play.api.Logger
 import play.api.libs.iteratee.Concurrent.Channel
+import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
 /**
@@ -17,6 +19,7 @@ class BucketManager {
   def broadCastMessageToFileRoom(message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID) =
     writeMessage(message, bytes) match {
       case Some(bytesToSend) =>
+        Logger.debug(s"broadcast message: $message - $bytes")
         channelPerUser.synchronized {
           (FileCaches.users(message.fd) - sender).foreach {
             case id if channelPerUser.get(id.stringify).nonEmpty =>
@@ -30,10 +33,14 @@ class BucketManager {
 
   def readMessage(bytes: Array[Byte]): Option[MessageEnvelop] = {
     try {
-      val headerSize = ByteBuffer.wrap(bytes.slice(0, 4)).getInt
-      val messageType = ByteBuffer.wrap(bytes.slice(4, 8)).getInt
-      val messageBytes = bytes.slice(8, headerSize + 8)
-      MessageEnvelop.read(messageType, messageBytes, if (bytes.size > headerSize + 8)
+      val buffer = ByteBuffer.wrap(bytes)
+      buffer.order(ByteOrder.BIG_ENDIAN)
+
+      val headerSize = buffer.getInt
+      val messageType = buffer.getInt
+      val headerBytes = bytes.slice(buffer.position(), buffer.position() + headerSize)
+
+      MessageEnvelop.read(messageType, headerBytes, if (bytes.size > headerSize + 8)
         Some(bytes.slice(headerSize + 8, bytes.size))
       else
         None

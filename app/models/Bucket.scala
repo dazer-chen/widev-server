@@ -170,15 +170,7 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
   }
 
   def findBucketInfos(id: BSONObjectID): Future[Option[Bucket]] =
-    collection.find(BSONDocument("_id" -> id), BSONDocument(
-      "name" -> true,
-      "owner" -> true,
-      "path" -> true,
-      "md5" -> true,
-      "createdAt" -> true,
-      "updatedAt" -> true,
-      "version" -> true)
-    ).one[BSONDocument].map {
+    collection.find(BSONDocument("_id" -> id), BSONDocument("files" -> false)).one[BSONDocument].map {
       case Some(res) =>
         Some(Bucket.handler.read(res ++ ("files" -> BSONDocument())))
       case None => None

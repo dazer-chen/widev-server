@@ -54,7 +54,7 @@ trait AuthConfigImpl extends AuthConfig with Results {
   /**
    * The session timeout in seconds
    */
-  val sessionTimeoutInSeconds: Int = 3600
+  val sessionTimeoutInSeconds: Int = 3600 * 24 * 10
 
   /**
    * A function that returns a `User` object from an `Id`.
