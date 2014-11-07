@@ -46,5 +46,5 @@ PUT           /buckets/:id/file/:fd/close         controllers.BucketController.c
 GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
 GET           /teams                                controllers.TeamController.getTeams
 POST          /teams                                controllers.TeamController.createTeam
-PUT           /teams/:id/add                        controllers.TeamController.addUser(id: String)
-PUT           /teams/:id/remove                     controllers.TeamController.removeUser(id: String)
+PUT           /teams/:id/users/add                  controllers.TeamController.addUser(id: String)
+PUT           /teams/:id/users/remove               controllers.TeamController.removeUser(id: String)
