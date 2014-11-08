@@ -1,6 +1,7 @@
 package managers
 
 import models.Plugins
+import play.api.http.{ContentTypeOf, Writeable}
 import play.api.libs.ws.WS
 import play.api.mvc.Request
 import play.modules.reactivemongo.ReactiveMongoPlugin
@@ -14,7 +15,7 @@ import scala.concurrent.Future
  */
 class PluginManager(plugins: Plugins) {
 
-  def broadcastToAll[T](request: Request[T]) = plugins.list.flatMap {
+  def broadcastToAll[T](request: Request[T])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]) = plugins.list.flatMap {
     plugins =>
       Future.sequence(plugins.map {
         plugin =>
@@ -22,6 +23,8 @@ class PluginManager(plugins: Plugins) {
             .withHeaders(request.headers.toSimpleMap.toSeq:_*)
             .withRequestTimeout(10000)
             .withQueryString(request.queryString.toSeq.map { case (k, v) => (k, v.mkString(",")) }:_*)
+            .withFollowRedirects(follow = true)
+            .withBody(request.body)
             .execute(request.method)
       }).mapTo[Unit]
   }
