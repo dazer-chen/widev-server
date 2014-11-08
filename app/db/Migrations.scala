@@ -24,26 +24,25 @@ object Migrations {
   def run(db: DefaultDB)(implicit ec: ExecutionContext): Future[Seq[AppliedMigration]] = {
     implicit val migrations = db.collection[BSONCollection]("migrations")
 
-    migrations.indexesManager.ensure(Index(List("created_at" -> IndexType.Descending)))
 
-    migrations.find(BSONDocument()).sort(BSONDocument("$natural" -> true)).one[AppliedMigration].flatMap {
-      case Some(lastMigration) if lastMigration.createdAt.isBefore(DateTime.now) =>
+    migrations.find(BSONDocument()).sort(BSONDocument("index" -> -1)).one[AppliedMigration].flatMap {
+      case Some(lastMigration) if lastMigration.index + 1 >= MigrationRecords.migrations.size =>
         throw new DbAlreadyUpToDate
       case Some(lastMigration) =>
-        runMigrations(MigrationRecords.migrations.splitAt(lastMigration.index)._2, db)
+        runMigrations(lastMigration.index + 1, MigrationRecords.migrations.splitAt(lastMigration.index + 1)._2, db)
       case None =>
-        runMigrations(MigrationRecords.migrations, db)
+        runMigrations(0, MigrationRecords.migrations, db)
     }.flatMap(_.find(BSONDocument()).sort(BSONDocument("$natural" -> true)).cursor[AppliedMigration].collect[Seq]())
   }
 
-  private def runMigrations(migrations: Seq[Migration], db: DefaultDB)(implicit collection: BSONCollection, ec: ExecutionContext) =
-    migrations.foldLeft((Future(), 0)) {
+  private def runMigrations(index: Int, migrations: Seq[Migration], db: DefaultDB)(implicit collection: BSONCollection, ec: ExecutionContext) =
+    migrations.foldLeft((Future {}, 0)) {
       (t, obj) =>
         (t._1.flatMap {
           _ =>
-            collection.insert(AppliedMigration(t._2, obj.toString)).map {
+            collection.insert(AppliedMigration(t._2 + index, obj.toString)).map {
               _ => obj.run(db)
             }
-        }, t._2)
+        }, t._2 + 1)
     }._1.map { _ => collection }
 }

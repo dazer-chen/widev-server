@@ -67,4 +67,6 @@ case class Users(db: DefaultDB) extends Collection[User] {
 
   def find(email: String): Future[Option[User]] =
     collection.find(BSONDocument("email" -> email)).one[User]
+
+  override def create(user: User) = super.create(user.copy(password = BCrypt.hashpw(user.password, BCrypt.gensalt())))
 }

@@ -11,6 +11,7 @@ import db.migrations._
  */
 object MigrationRecords {
   val migrations = Seq(
-    M1_AddIndexesForUsersCollection
+    M1_AddIndexesForUsersCollection,
+    M2_AddDefaultUsers
   )
 }

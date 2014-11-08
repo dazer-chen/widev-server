@@ -64,7 +64,12 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
         Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
       },
       user => {
-        users.create(User(user.email, BCrypt.hashpw(user.password, BCrypt.gensalt()), firstName = user.firstName, lastName = user.lastName)).flatMap {
+        users.create(User(
+          email = user.email,
+          password = user.password,
+          firstName = user.firstName,
+          lastName = user.lastName)
+        ).flatMap {
           user => gotoLoginSucceeded(user._id.stringify)(request, defaultContext)
         } recover {
           case err: DuplicateModel =>

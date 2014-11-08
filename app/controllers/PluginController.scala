@@ -1,10 +1,12 @@
 package controllers
 
-import models.{Plugin, Plugins}
+import jp.t2v.lab.play2.auth.AuthElement
+import models.{Standard, Administrator, Plugin, Plugins}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsError, JsPath, Json, Reads}
 import play.api.mvc.{Action, BodyParsers, Controller}
 import play.modules.reactivemongo.ReactiveMongoPlugin
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -13,10 +15,11 @@ import play.api.Play.current
 /**
  * Created by trupin on 11/8/14.
  */
-class PluginController(plugins: Plugins) extends Controller {
-  def register = Action.async(BodyParsers.parse.json) {
-    implicit request =>
+class PluginController(plugins: Plugins) extends Controller with AuthElement {
+  self: AuthConfigImpl =>
 
+  def register = AsyncStack( BodyParsers.parse.json, AuthorityKey -> Administrator) {
+    implicit request =>
       case class CreatePlugin(name: String, endPoint: String)
 
       implicit val createTeamReads: Reads[CreatePlugin] = (
@@ -37,6 +40,19 @@ class PluginController(plugins: Plugins) extends Controller {
         }
       )
   }
+
+  def getPlugin(id: String) = AsyncStack( BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      plugins.find(BSONObjectID(id)).map {
+        case Some(plugin) => Ok(Json.toJson(plugin))
+        case None => NotFound(s"Couldn't find plugin for id: $id")
+      }
+  }
+
+  def getPlugins = AsyncStack( BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      plugins.list.map(list => Ok(Json.toJson(list)))
+  }
 }
 
-object PluginController extends PluginController(Plugins(ReactiveMongoPlugin.db))
+object PluginController extends PluginController(Plugins(ReactiveMongoPlugin.db)) with AuthConfigImpl
