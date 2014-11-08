@@ -25,7 +25,7 @@ object Plugin {
 }
 
 case class Plugins(db: DefaultDB) extends Collection[Plugin] {
-  val collection = db.collection[BSONCollection]("users")
+  val collection = db.collection[BSONCollection]("plugins")
 
   def relations: Seq[SuperCollection] = Seq.empty
 
