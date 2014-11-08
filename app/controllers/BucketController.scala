@@ -126,7 +126,7 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
       val bucketName = request.getQueryString("name")
       val user = loggedIn
 
-      PluginManager.broadcastToAll(request)
+//      PluginManager.broadcastToAll(request)
 
       if (bucketName.isEmpty) {
         Future(BadRequest(s"'name' parameter required."))
