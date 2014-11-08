@@ -36,7 +36,7 @@ object Session {
 
 case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigImpl {
 
-  val collection = db.collection[BSONCollection]("session")
+  val collection = db.collection[BSONCollection]("sessions")
 
   def relations: Seq[SuperCollection] = Seq.empty
 

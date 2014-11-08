@@ -49,7 +49,7 @@ object Team {
 
 case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
 
-  val collection = db.collection[BSONCollection]("team")
+  val collection = db.collection[BSONCollection]("teams")
 
   def relations: Seq[SuperCollection] = Seq.empty
 

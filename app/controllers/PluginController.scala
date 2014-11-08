@@ -1,6 +1,7 @@
 package controllers
 
 import jp.t2v.lab.play2.auth.AuthElement
+import lib.mongo.DuplicateModel
 import models.{Administrator, Plugin, Plugins, Standard}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
@@ -36,12 +37,15 @@ class PluginController(plugins: Plugins) extends Controller with AuthElement {
         plugin => {
           plugins.create(Plugin(plugin.name, plugin.endPoint)).map {
             plugin => Ok(Json.toJson(plugin))
+          } recover {
+            case e: DuplicateModel =>
+              NotAcceptable(s"Plugin already exists.")
           }
         }
       )
   }
 
-  def getPlugin(id: String) = AsyncStack( BodyParsers.parse.json, AuthorityKey -> Standard) {
+  def getPlugin(id: String) = AsyncStack(AuthorityKey -> Standard) {
     implicit request =>
       plugins.find(BSONObjectID(id)).map {
         case Some(plugin) => Ok(Json.toJson(plugin))
@@ -49,7 +53,7 @@ class PluginController(plugins: Plugins) extends Controller with AuthElement {
       }
   }
 
-  def getPlugins = AsyncStack( BodyParsers.parse.json, AuthorityKey -> Standard) {
+  def getPlugins = AsyncStack(AuthorityKey -> Standard) {
     implicit request =>
       plugins.list.map(list => Ok(Json.toJson(list)))
   }

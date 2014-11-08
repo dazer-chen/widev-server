@@ -14,6 +14,7 @@ object MigrationRecords {
     M1_AddIndexesForUsersCollection,
     M2_AddDefaultUsers,
     M3_AddIndexesForPluginsCollection,
-    M4_AddIndexesForBucketsCollection
+    M4_AddIndexesForBucketsCollection,
+    M5_AddIndexesForTeamsCollection
   )
 }
