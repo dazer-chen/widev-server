@@ -8,7 +8,7 @@ import fly.play.s3._
 import jp.t2v.lab.play2.auth.{AsyncAuth, CookieUtil, AuthElement}
 import lib.mongo.DuplicateModel
 import lib.util.{Crypto, MD5}
-import managers.BucketManager
+import managers.{PluginManager, BucketManager}
 import messages._
 import models.{Bucket, _}
 import org.joda.time.DateTime
@@ -121,12 +121,12 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
       }
   }
 
-
-
   def createBucket = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     implicit request =>
       val bucketName = request.getQueryString("name")
       val user = loggedIn
+
+      PluginManager.broadcastToAll(request)
 
       if (bucketName.isEmpty) {
         Future(BadRequest(s"'name' parameter required."))
