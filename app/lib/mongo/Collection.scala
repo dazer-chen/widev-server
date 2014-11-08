@@ -214,10 +214,10 @@ abstract class Collection[M](implicit reader: BSONDocumentReader[M], writer: BSO
    *
    * @param model to update
    */
-  def update(model: M): Future[Boolean] = {
+  def update(model: M, upsert: Boolean = false): Future[Boolean] = {
     val document = writer.write(model)
     val id = getIdFromDocument("_id", document)
-    collection.update(BSONDocument("_id" -> id), model).map {
+    collection.update(BSONDocument("_id" -> id), model, upsert = upsert).map {
       case res if res.n > 0 => true
       case _ => false
     }

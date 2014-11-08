@@ -65,7 +65,7 @@ case class Sessions(db: DefaultDB) extends Collection[Session] with AuthConfigIm
           case Some(seconds) => DateTime.now.minusSeconds(seconds)
           case None => DateTime.now.minusSeconds(sessionTimeoutInSeconds)
         }
-          ))
+        ))
     ))
   }
 

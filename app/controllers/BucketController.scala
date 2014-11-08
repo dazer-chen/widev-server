@@ -30,7 +30,7 @@ import scala.concurrent.Future
  * Created by thomastosoni on 8/31/14.
  */
 
-class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends Controller with AuthElement with AsyncAuth {
+class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends Controller with AuthElement {
   self: AuthConfigImpl =>
 
   private[controllers] def uploadFileToS3(bucket: Bucket, filePath: String, contentType: String, bytes: Array[Byte]): Future[Unit] =

@@ -151,10 +151,7 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
         "teams" ->
           teamId
       )
-    )).map {
-      case some => true
-      case _ => false
-    }
+    )).map { _ => true }
   }
 
   def removeTeam(bucketId: BSONObjectID, teamId: BSONObjectID): Future[Boolean] = {
@@ -163,10 +160,7 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
         "teams" ->
           teamId
       )
-    )).map {
-      case some => true
-      case _ => false
-    }
+    )).map { _ => true }
   }
 
   def findBucketInfos(id: BSONObjectID): Future[Option[Bucket]] =
@@ -189,8 +183,8 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
   override def save(model: Bucket): Future[Bucket] =
     super.save(model.copy(updatedAt = DateTime.now(), version = model.version + 1))
 
-  override def update(model: Bucket): Future[Boolean] =
-    super.update(model.copy(updatedAt = DateTime.now(), version = model.version + 1))
+  override def update(model: Bucket, upsert: Boolean = true): Future[Boolean] =
+    super.update(model.copy(updatedAt = DateTime.now(), version = model.version + 1), upsert)
 
   def updateTeams(id: BSONObjectID, team: Set[BSONObjectID]): Future[Boolean] =
     collection.update(BSONDocument("_id" -> id), BSONDocument(

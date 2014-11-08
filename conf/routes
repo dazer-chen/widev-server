@@ -48,3 +48,6 @@ GET           /teams                                controllers.TeamController.g
 POST          /teams                                controllers.TeamController.createTeam
 PUT           /teams/:id/users/add                  controllers.TeamController.addUser(id: String)
 PUT           /teams/:id/users/remove               controllers.TeamController.removeUser(id: String)
+
+#Plugins
+PUT           /plugins/register                     controllers.PluginController.register

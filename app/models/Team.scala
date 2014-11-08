@@ -61,12 +61,7 @@ case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
         "users" ->
           userId
       )
-    )).map {
-      case (updated) => {
-        true
-      }
-      case _ => false
-    }
+    )).map { _ => true }
   }
 
   def removeUser(teamId: BSONObjectID, userId: BSONObjectID): Future[Boolean] = {
@@ -75,12 +70,7 @@ case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
         "users" ->
           userId
       )
-    )).map {
-      case (updated) => {
-        true
-      }
-      case _ => false
-    }
+    )).map { _ => true }
   }
 
 	def find(name: String, owner: BSONObjectID): Future[Option[Team]] =
@@ -92,6 +82,6 @@ case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
 	override def save(model: Team): Future[Team] =
 		super.save(model.copy(createdAt = DateTime.now()))
 
-	override def update(model: Team): Future[Boolean] =
+	override def update(model: Team, upsert: Boolean = true): Future[Boolean] =
 		super.update(model.copy(updatedAt = DateTime.now()))
 }
