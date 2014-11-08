@@ -50,4 +50,6 @@ PUT           /teams/:id/users/add                  controllers.TeamController.a
 PUT           /teams/:id/users/remove               controllers.TeamController.removeUser(id: String)
 
 #Plugins
-PUT           /plugins/register                     controllers.PluginController.register
+GET           /plugins/:id                          controllers.PluginController.getPlugin(id: String)
+POST          /plugins                              controllers.PluginController.createPlugin
+GET           /plugins                              controllers.PluginController.getPlugins

@@ -1,16 +1,16 @@
 package controllers
 
 import jp.t2v.lab.play2.auth.AuthElement
-import models.{Standard, Administrator, Plugin, Plugins}
+import models.{Administrator, Plugin, Plugins, Standard}
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsError, JsPath, Json, Reads}
-import play.api.mvc.{Action, BodyParsers, Controller}
+import play.api.mvc.{BodyParsers, Controller}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
 
 /**
  * Created by trupin on 11/8/14.
@@ -18,7 +18,7 @@ import play.api.Play.current
 class PluginController(plugins: Plugins) extends Controller with AuthElement {
   self: AuthConfigImpl =>
 
-  def register = AsyncStack( BodyParsers.parse.json, AuthorityKey -> Administrator) {
+  def createPlugin = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Administrator) {
     implicit request =>
       case class CreatePlugin(name: String, endPoint: String)
 
@@ -34,7 +34,7 @@ class PluginController(plugins: Plugins) extends Controller with AuthElement {
           Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
         },
         plugin => {
-          plugins.update(Plugin(plugin.name, plugin.endPoint), upsert = true).map {
+          plugins.create(Plugin(plugin.name, plugin.endPoint)).map {
             plugin => Ok(Json.toJson(plugin))
           }
         }
@@ -53,6 +53,7 @@ class PluginController(plugins: Plugins) extends Controller with AuthElement {
     implicit request =>
       plugins.list.map(list => Ok(Json.toJson(list)))
   }
+
 }
 
 object PluginController extends PluginController(Plugins(ReactiveMongoPlugin.db)) with AuthConfigImpl

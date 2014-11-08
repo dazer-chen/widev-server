@@ -44,8 +44,8 @@ object User {
   def generate = User(
     email = BSONObjectID.generate.stringify,
     password = BSONObjectID.generate.stringify,
-    firstName = Some("toto"),
-    lastName = Some("titi")
+    firstName = Some("test first name"),
+    lastName = Some("test last name")
   )
 
 }
