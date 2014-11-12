@@ -3,6 +3,7 @@ package controllers
 import jp.t2v.lab.play2.auth.{AsyncAuth, LoginLogout, AuthElement}
 import lib.mongo.DuplicateModel
 import lib.play2auth.LoginSuccess
+import managers.PluginManager
 import models.{Buckets, Standard, User, Users}
 import org.mindrot.jbcrypt.BCrypt
 import play.api.Play.current
@@ -70,7 +71,11 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
           firstName = user.firstName,
           lastName = user.lastName)
         ).flatMap {
-          user => gotoLoginSucceeded(user._id.stringify)(request, defaultContext)
+          user => {
+            PluginManager.createUser(user).flatMap {
+              _ => gotoLoginSucceeded(user._id.stringify)(request, defaultContext)
+            }
+          }
         } recover {
           case err: DuplicateModel =>
             NotAcceptable(s"User already exists.")

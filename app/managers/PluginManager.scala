@@ -1,8 +1,10 @@
 package managers
 
-import models.Plugins
-import play.api.http.{ContentTypeOf, Writeable}
+import models.{User, Plugins}
+import play.api.http.{HeaderNames, ContentTypeOf, Writeable}
+import play.api.libs.json.{JsString, Json}
 import play.api.libs.ws.WS
+import play.api.libs.ws.WSRequestHolder
 import play.api.mvc.Request
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.api.Play.current
@@ -15,19 +17,27 @@ import scala.concurrent.Future
  */
 class PluginManager(plugins: Plugins) {
 
-  def broadcastToAll[T](request: Request[T])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]) = plugins.list.flatMap {
+  private[managers] def broadcastToAll[T](method: String, path: String, request: (WSRequestHolder => WSRequestHolder)) = plugins.list.flatMap {
     plugins =>
       Future.sequence(plugins.map {
         plugin =>
-          WS.url(plugin.endPoint + request.path)
-            .withHeaders(request.headers.toSimpleMap.toSeq:_*)
+          request(WS.url(plugin.endPoint + '/' + plugin.name + path))
             .withRequestTimeout(10000)
-            .withQueryString(request.queryString.toSeq.map { case (k, v) => (k, v.mkString(",")) }:_*)
             .withFollowRedirects(follow = true)
-            .withBody(request.body)
-            .execute(request.method)
+            .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+            .execute(method)
       }).mapTo[Unit]
   }
+
+  def createUser(user: User) = broadcastToAll("post", "/users", (request: WSRequestHolder) => {
+    val body = Json.obj(
+      "email" -> JsString(user.email),
+      "password" -> JsString(user.password),
+      "firstName" -> JsString(user.firstName.get),
+      "lastName" -> JsString(user.lastName.get)
+    ).toString()
+    request.withBody(body)
+  })
 }
 
 object PluginManager extends PluginManager(new Plugins(ReactiveMongoPlugin.db))
