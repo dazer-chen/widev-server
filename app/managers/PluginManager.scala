@@ -17,7 +17,7 @@ import scala.concurrent.Future
  */
 class PluginManager(plugins: Plugins) {
 
-  private[managers] def broadcastToAll[T](method: String, path: String, request: (WSRequestHolder => WSRequestHolder)) = plugins.list.flatMap {
+  private[managers] def broadcastToAll(method: String, path: String, request: (WSRequestHolder => WSRequestHolder)) = plugins.list.flatMap {
     plugins =>
       Future.sequence(plugins.map {
         plugin =>
@@ -26,16 +26,22 @@ class PluginManager(plugins: Plugins) {
             .withFollowRedirects(follow = true)
             .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
             .execute(method)
-      }).mapTo[Unit]
+      }).map {
+        _ => {
+          println("Request done.")
+        }
+      }
   }
 
-  def createUser(user: User) = broadcastToAll("post", "/users", (request: WSRequestHolder) => {
+  def createUser(user: User) = broadcastToAll("POST", "/users", (request: WSRequestHolder) => {
+
     val body = Json.obj(
       "email" -> JsString(user.email),
       "password" -> JsString(user.password),
       "firstName" -> JsString(user.firstName.get),
       "lastName" -> JsString(user.lastName.get)
-    ).toString()
+    )
+
     request.withBody(body)
   })
 }
