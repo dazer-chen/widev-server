@@ -2,8 +2,54 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# Home page
-GET     /                           controllers.Application.index
+# Migrations
+GET           /migrate                              controllers.MigrationController.run
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET           /assets/*file                         controllers.Assets.at(path="/public", file)
+
+# Oauth Github
+GET           /github/callback                      controllers.Authentication.githubCallback(code: String)
+GET           /github/signin                        controllers.Authentication.githubSigning
+GET           /github/authentication/success        controllers.Authentication.success(token_session: String)
+GET           /github/authentication/fail           controllers.Authentication.fail(token_session: String)
+
+# OAuth2 provider
+POST          /oauth2/access_token                  controllers.OAuth2ProviderController.accessToken
+
+# Authentification routes
+POST          /authenticate                         controllers.Authentication.Authenticate
+
+#User Module
+GET           /users/current                        controllers.UserController.getCurrentUser
+GET           /users/search                         controllers.UserController.getUsers
+GET           /users/:id                            controllers.UserController.getUser(id: String)
+POST          /users                                controllers.UserController.createUser
+
+# Bucket
+GET           /buckets/ws                           controllers.BucketController.socket
+GET           /buckets/:id                          controllers.BucketController.getBucket(id: String)
+GET           /buckets/:id/files                    controllers.BucketController.listFiles(id: String)
+GET           /buckets/:id/file                     controllers.BucketController.getFile(id: String)
+POST          /buckets                              controllers.BucketController.createBucket
+GET           /buckets                              controllers.BucketController.getBuckets
+POST          /buckets/:id/file                     controllers.BucketController.uploadFile(id: String)
+DELETE        /buckets/:id/file                     controllers.BucketController.deleteFile(id: String)
+PUT           /buckets/:id/teams                    controllers.BucketController.updateTeams(id: String)
+PUT           /buckets/:id/teams/add                controllers.BucketController.addTeam(id: String)
+PUT           /buckets/:id/teams/remove             controllers.BucketController.removeTeam(id: String)
+
+GET           /buckets/:id/file/open                controllers.BucketController.openFileCache(id: String)
+PUT           /buckets/:id/file/:fd/close           controllers.BucketController.closeFileCache(id: String, fd: String)
+
+#Teams
+GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
+GET           /teams                                controllers.TeamController.getTeams
+POST          /teams                                controllers.TeamController.createTeam
+PUT           /teams/:id/users/add                  controllers.TeamController.addUser(id: String)
+PUT           /teams/:id/users/remove               controllers.TeamController.removeUser(id: String)
+
+#Plugins
+GET           /plugins/:id                          controllers.PluginController.getPlugin(id: String)
+POST          /plugins                              controllers.PluginController.createPlugin
+GET           /plugins                              controllers.PluginController.getPlugins

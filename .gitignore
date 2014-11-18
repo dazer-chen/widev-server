@@ -10,3 +10,5 @@ history
 .idea_modules
 
 *~
+
+conf/application.conf
