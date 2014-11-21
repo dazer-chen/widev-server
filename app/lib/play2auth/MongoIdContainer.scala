@@ -8,7 +8,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.reflect.ClassTag
 
 
@@ -29,10 +29,12 @@ class MongoIdContainer[Id: ClassTag](sessions: Sessions = MongoIdContainer.sessi
       case string:String => BSONObjectID(string)
       case _ => throw new RuntimeException("Id format not supported.")
     }
-    sessions.removeByUser(user)
-    val session = sessions.create(Session(token = token, userId = user))
     import scala.concurrent.duration._
-    Await.result(session, 10.second).token
+    Await.result(Future.sequence(Seq(
+      sessions.removeByUser(user),
+      sessions.create(Session(token = token, userId = user))
+    )), 10.seconds)
+    token
   }
 
   def remove(token: AuthenticityToken): Unit = {

@@ -1,6 +1,7 @@
 package controllers
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
 import fly.play.aws.PlayConfiguration
 import fly.play.aws.auth.AwsCredentials
@@ -125,8 +126,6 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
     implicit request =>
       val bucketName = request.getQueryString("name")
       val user = loggedIn
-
-//      PluginManager.broadcastToAll(request)
 
       if (bucketName.isEmpty) {
         Future(BadRequest(s"'name' parameter required."))
@@ -338,7 +337,7 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
           case None =>
             Logger.warn(s"Unhandled message")
         }
-      case None => Logger.debug(s"Received an invalid message")
+      case None => Logger.debug(s"Invalid message")
     }
 
 }

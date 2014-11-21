@@ -1,7 +1,6 @@
 package models
 
 import lib.util.MD5
-import play.api.libs.iteratee.Concurrent.Channel
 import reactivemongo.bson.BSONObjectID
 
 /**
