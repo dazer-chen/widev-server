@@ -71,9 +71,9 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
           firstName = user.firstName,
           lastName = user.lastName)
         ).flatMap {
-          user => {
-            PluginManager.createUser(user).flatMap {
-              _ => gotoLoginSucceeded(user._id.stringify)(request, defaultContext)
+          userModel => {
+            PluginManager.createUser(userModel.copy(password = user.password)).flatMap {
+              _ => gotoLoginSucceeded(userModel._id.stringify)(request, defaultContext)
             }
           }
         } recover {
