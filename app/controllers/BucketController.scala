@@ -44,17 +44,25 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
     }
 
   def getBucket(id: String) = AsyncStack(AuthorityKey -> Standard) {
-    request =>
-      buckets.find(BSONObjectID(id)).map {
-        case Some(bucket) => Ok(Json.toJson(bucket))
-        case None => NotFound(s"Couldn't find bucket for id: $id")
+    implicit request =>
+      val user = loggedIn
+
+      buckets.find(BSONObjectID(id)).flatMap {
+        case Some(bucket) =>
+          buckets.userCanRead(BSONObjectID(id), user._id).map {
+            case true =>
+              Ok(Json.toJson(bucket))
+            case _ =>
+              Unauthorized(s"You cannot access to this bucket.")
+          }
+        case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
       }
   }
 
   def getBuckets = AsyncStack(AuthorityKey -> Standard) {
     implicit request =>
       val user = loggedIn
-      buckets.findByOwner(user._id).map(bs => Ok(Json.toJson(bs)))
+      buckets.findByUser(user._id).map(bs => Ok(Json.toJson(bs)))
   }
 
   def updateTeams(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {

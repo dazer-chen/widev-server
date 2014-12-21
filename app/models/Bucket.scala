@@ -95,9 +95,11 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
 
 	override def generate: Bucket = Bucket.generate
 
-	override def relations: Seq[SuperCollection] = Seq.empty
+  val factory = Factory(db)
 
-	def find(name: String, owner: BSONObjectID): Future[Option[Bucket]] =
+  override def relations = Seq(factory.teams)
+
+  def find(name: String, owner: BSONObjectID): Future[Option[Bucket]] =
 		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Bucket]
 
 	def deleteByName(name: String): Future[LastError] =
@@ -119,6 +121,24 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
 
   def findByOwner(owner: BSONObjectID) = {
     collection.find(BSONDocument("owner" -> owner)).cursor[Bucket].collect[List]()
+  }
+
+  def findByUser(user: BSONObjectID) = {
+    findByOwner(user).flatMap {
+      ownedBuckets =>
+        factory.teams.findByUser(user).flatMap {
+          otherTeams =>
+            collection.find(BSONDocument("teams" -> BSONDocument("$in" -> otherTeams.map(_._id)))).cursor[Bucket].collect[Set]().map(_ ++ ownedBuckets)
+        }
+    }
+  }
+
+  def userCanRead(bucket: BSONObjectID, user: BSONObjectID) = {
+    find(bucket).flatMap {
+      case Some(bucket) if bucket.owner == user => Future(true)
+      case Some(bucket) => factory.teams.isUserInOneTeam(bucket.teams, user)
+      case _ => Future(false)
+    }
   }
 
   def findFileHeader(id: BSONObjectID, filePath: String): Future[Option[BucketFileHeader]] = {

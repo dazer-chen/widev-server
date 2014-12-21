@@ -27,7 +27,7 @@ object Global extends GlobalSettings {
   }
 
   override def onStart(app: Application): Unit = {
-    Migrations.runOnFirstApplicationStart()
+//    Migrations.runOnFirstApplicationStart()
   }
 
   override def doFilter(next: EssentialAction): EssentialAction = {

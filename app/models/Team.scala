@@ -4,6 +4,7 @@ import controllers.AuthConfigImpl
 import lib.mongo.{SuperCollection, Collection}
 import lib.util.BearerTokenGenerator
 import org.joda.time.DateTime
+import play.api.Logger
 import play.api.libs.json.{Json, Writes}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
@@ -81,6 +82,18 @@ case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
 
 	def findByOwner(owner: BSONObjectID) =
 		collection.find(BSONDocument("owner" -> owner)).cursor[Team].collect[List]()
+
+  def findByUser(user: BSONObjectID) =
+    collection.find(BSONDocument("users" -> user)).cursor[Team].collect[List]()
+
+  def isUserInOneTeam(teams: Set[BSONObjectID], user: BSONObjectID) =
+    collection.find(BSONDocument(
+      "_id" -> BSONDocument("$in" -> teams),
+      "users" -> BSONDocument("$in" -> BSONArray(user))
+    )).one[Team].map {
+      case None => false
+      case _ => true
+    }
 
 	override def save(model: Team): Future[Team] =
 		super.save(model.copy(createdAt = DateTime.now()))

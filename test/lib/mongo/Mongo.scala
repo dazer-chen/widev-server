@@ -20,7 +20,7 @@ trait Mongo {
   val db = connection("spec2-test-widev")
 
   Await.ready(db.drop, timeout)
-  Await.ready(Migrations.run(db), timeout)
+//  Await.ready(Migrations.run(), timeout)
 
   lazy val factory = new Factory(db)
 }
