@@ -2,9 +2,7 @@ package controllers
 
 import lib.util.Parser
 import managers.PluginManager
-
 import scala.concurrent.Future
-
 import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
 import models._
@@ -15,6 +13,8 @@ import play.api.libs.json._
 import play.api.mvc.{BodyParsers, Controller}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.Future
 
 /**
  * Created by benjamincanac on 23/10/2014.

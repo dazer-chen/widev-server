@@ -15,11 +15,11 @@ object Implicits {
   }
 
   implicit object JSONDateTimeWriter extends Writes[DateTime] {
-    override def writes(o: DateTime): JsValue = Json.toJson(o.toString("yyyy-MM-dd'T'hh:mm:ss.SSS'Z'"))
+    override def writes(o: DateTime): JsValue = Json.toJson(o.toString("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
   }
 
   implicit object JSONDateTimeReader extends Reads[DateTime] {
     override def reads(json: JsValue): JsResult[DateTime] =
-      JsSuccess(DateTime.parse(json.toString(), DateTimeFormat.forPattern("yyyy-MM-dd'T'hh:mm:ss.SSS'Z'")))
+      JsSuccess(DateTime.parse(json.toString(), DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")))
   }
 }

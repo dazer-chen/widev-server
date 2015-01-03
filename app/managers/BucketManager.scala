@@ -19,10 +19,10 @@ class BucketManager {
   def broadCastMessageToFileRoom(message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID) =
     writeMessage(message, bytes) match {
       case Some(bytesToSend) =>
-        Logger.debug(s"broadcast message: $message - $bytes")
         channelPerUser.synchronized {
           (FileCaches.users(message.fd) - sender).foreach {
             case id if channelPerUser.get(id.stringify).nonEmpty =>
+              Logger.debug(s"broadcast message: ${id.stringify} - $message - $bytes")
               channelPerUser(id.stringify).push(bytesToSend)
             case id =>
               Logger.warn(s"No openned channel for user: '$id'")

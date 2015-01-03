@@ -1,29 +1,22 @@
 package controllers
 
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
-
 import fly.play.aws.PlayConfiguration
 import fly.play.aws.auth.AwsCredentials
 import fly.play.s3._
-import jp.t2v.lab.play2.auth.{AsyncAuth, CookieUtil, AuthElement}
+import jp.t2v.lab.play2.auth.AuthElement
 import lib.mongo.DuplicateModel
 import lib.util.{Crypto, MD5}
-import managers.{PluginManager, BucketManager}
-import messages._
+import managers.BucketManager
 import models.{Bucket, _}
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Concurrent.Channel
 import play.api.libs.iteratee.{Concurrent, Iteratee}
+import play.api.libs.json._
 import play.api.mvc.{BodyParsers, Controller, WebSocket}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-
 
 import scala.concurrent.Future
 
@@ -51,7 +44,12 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
         case Some(bucket) =>
           buckets.userCanRead(BSONObjectID(id), user._id).map {
             case true =>
-              Ok(Json.toJson(bucket))
+              val openedFilesNum = bucket.files.count {
+                case (k, v) if FileCaches.isOpen(bucket, v.path) => true
+                case _ => false
+              }
+
+              Ok(Json.toJson(bucket.copy(updatedAt = if (openedFilesNum > 0) DateTime.now else bucket.updatedAt)))
             case _ =>
               Unauthorized(s"You cannot access to this bucket.")
           }
@@ -158,18 +156,45 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
       else
         buckets.find(BSONObjectID(id)).flatMap {
           case Some(bucket) =>
-            s3Bucket.get(bucket.physicalFilePath(filePath.get)).map {
-              case BucketFile(path, contentType, content, acl, headers) =>
-                Ok(content).withHeaders(headers.getOrElse(Seq()).toSeq:_*)
+            FileCaches.readAll(bucket, filePath.get) match {
+              case Some(content) =>
+                Future(Ok(content))
+              case None =>
+                s3Bucket.get(bucket.physicalFilePath(filePath.get)).map {
+                  case BucketFile(path, contentType, content, acl, headers) =>
+                    Ok(content) //.withHeaders(headers.getOrElse(Seq()).toSeq:_*)
+                }
             }
           case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
         }
   }
 
+//  def getFileHeader(id: String) = AsyncStack(AuthorityKey -> Standard) {
+//    request =>
+//      val filePath = request.getQueryString("file-path")
+//      if (filePath.isEmpty)
+//        Future(BadRequest(s"'name' parameter required."))
+//      else
+//        buckets.find(BSONObjectID(id)).flatMap {
+//          case Some(bucket) =>
+//            s3Bucket.get(bucket.physicalFilePath(filePath.get)).map {
+//              case BucketFile(path, contentType, content, acl, headers) =>
+//                Ok(content).withHeaders(headers.getOrElse(Seq()).toSeq:_*)
+//            }
+//          case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
+//        }
+//  }
+
   def listFiles(id: String) = AsyncStack(AuthorityKey -> Standard) {
     request =>
       buckets.find(BSONObjectID(id)).map {
-        case Some(bucket) => Ok(Json.toJson(bucket.files.map { f => Json.toJson(f._2) }))
+        case Some(bucket) => Ok(Json.toJson(bucket.files.map {
+          f => Json.toJson(f._2 match {
+            case fileHeader if FileCaches.isOpen(bucket, fileHeader.path) =>
+              fileHeader.copy(updatedAt = DateTime.now())
+            case fileHeader => fileHeader
+          })
+        }))
         case None => NotFound(s"Couldn't find bucket for id: $id")
       }
   }
@@ -195,6 +220,10 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
             if (fileContentSum != cacheFileContentSum) {
               FileCaches.clear(fd, user._id)
               FileCaches.insert(fd, user._id, 0, request.body.asRaw.get.asBytes().get)
+
+              // broadcast the file replacement -> this case should never happen
+//              BucketManager.broadCastMessageToFileRoom(InsertFileAction(fd, None, 0), request.body.asRaw.get.asBytes(), user._id)
+
               FileCaches.willClose(fd, user._id) match {
                 case true => // we need to upload the file so we don't loose data
                   FileCaches.close(fd, user._id)

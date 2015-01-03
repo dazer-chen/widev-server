@@ -13,7 +13,7 @@ case class RemoveFileAction(fd: String, sessionToken: Option[String], at: Int, l
 
   override def action(sender: BSONObjectID, bytes: Option[Array[Byte]], broadcast: (FileAction, Option[Array[Byte]]) => Unit): Unit =
     if (FileCaches.remove(fd, sender, at, length))
-      broadcast(InsertFileAction(fd, None, at), None)
+      broadcast(RemoveFileAction(fd, None, at, length), None)
 }
 
 object RemoveFileAction {

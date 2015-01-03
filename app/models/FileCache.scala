@@ -1,6 +1,7 @@
 package models
 
 import lib.util.MD5
+import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 
 /**
@@ -13,6 +14,11 @@ sealed class FileCache(
                         val bytes: scala.collection.mutable.ArrayBuffer[Byte],
                         val users: scala.collection.mutable.LinkedHashMap[BSONObjectID, Int]
                         )
+{
+  override def toString: String = s"path: $path, contentType: $contentType, bytes length: ${bytes.length}, users: ${users.map {
+    e => e._1.stringify -> e._2
+  }.mkString(",\n")}"
+}
 
 object FileCaches {
   private val collection = scala.collection.mutable.LinkedHashMap.empty[String, FileCache]
@@ -56,14 +62,23 @@ object FileCaches {
     }
   }
 
-  def readAll(fd: String, userId: BSONObjectID): Option[Array[Byte]] = synchronized {
+  def readAll(fd: String, userId: BSONObjectID): Option[Array[Byte]] = collection.synchronized {
     collection.get(fd) match {
       case Some(file) if file.users.contains(userId) => Some(file.bytes.toArray[Byte])
       case _ => None
     }
   }
 
-  def read(fd: String, userId: BSONObjectID, from: Int, length: Int): Option[Array[Byte]] = synchronized {
+  def readAll(bucket: Bucket, filePath: String) = collection.synchronized {
+    val fd = MD5.hex_digest(bucket.physicalFilePath(filePath))
+
+    collection.get(fd) match {
+      case Some(file) => Some(file.bytes.toArray[Byte])
+      case _ => None
+    }
+  }
+
+  def read(fd: String, userId: BSONObjectID, from: Int, length: Int): Option[Array[Byte]] = collection.synchronized {
     collection.get(fd) match {
       case Some(file) if file.users.contains(userId) =>
         Some(file.bytes.slice(from, length).toArray[Byte])
@@ -71,14 +86,14 @@ object FileCaches {
     }
   }
 
-  def filePath(fd: String): Option[String] = synchronized {
+  def filePath(fd: String): Option[String] = collection.synchronized {
     collection.get(fd) match {
       case Some(file) => Some(file.path)
       case _ => None
     }
   }
 
-  def fileContentType(fd: String): Option[String] = synchronized {
+  def fileContentType(fd: String): Option[String] = collection.synchronized {
     collection.get(fd) match {
       case Some(file) => file.contentType
       case _ => None
@@ -111,6 +126,8 @@ object FileCaches {
   def open(bucket: Bucket, userId: BSONObjectID, filePath: String): String = collection.synchronized {
     val fd = MD5.hex_digest(bucket.physicalFilePath(filePath))
 
+    Logger.debug(s"opening filePath: $filePath, for user: ${userId.stringify}, files: ${collection.mkString(",")}")
+
     collection.get(fd) match {
       case Some(file) =>
         file.users.get(userId) match {
@@ -127,11 +144,15 @@ object FileCaches {
         collection += (fd -> file)
     }
 
+    Logger.debug(s"opened filePath: $filePath, for user: ${userId.stringify}, files: ${collection.mkString(",")}")
+
     fd
   }
 
   def close(fd: String, userId: BSONObjectID): Boolean = collection.synchronized {
-    collection.get(fd) match {
+    Logger.debug(s"closing fd: $fd, for user: ${userId.stringify}, files: ${collection.mkString("\n")}")
+
+    val res = collection.get(fd) match {
       case Some(file) =>
         file.users.get(userId) match {
           case Some(n) if n > 1 =>
@@ -146,6 +167,10 @@ object FileCaches {
         }
       case None => false
     }
+
+    Logger.debug(s"closed fd: $fd, for user: ${userId.stringify}, files: ${collection.mkString("\n")}")
+
+    res
   }
 
 }

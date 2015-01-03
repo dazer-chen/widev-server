@@ -13,7 +13,7 @@ case class ReplaceFileAction(fd: String, sessionToken: Option[String], at: Int) 
 
   override def action(sender: BSONObjectID, bytes: Option[Array[Byte]], broadcast: (FileAction, Option[Array[Byte]]) => Unit): Unit =
     if (bytes.nonEmpty && FileCaches.replace(fd, sender, at, bytes.get))
-      broadcast(InsertFileAction(fd, None, at), bytes)
+      broadcast(ReplaceFileAction(fd, None, at), bytes)
 }
 
 
