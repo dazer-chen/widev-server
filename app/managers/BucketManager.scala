@@ -1,13 +1,11 @@
 package managers
 
-import java.nio.{ByteOrder, ByteBuffer}
-import java.nio.charset.Charset
+import java.nio.{ByteBuffer, ByteOrder}
 
 import messages.{FileAction, MessageEnvelop}
-import models.FileCaches
+import models.Bucket
 import play.api.Logger
 import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
 /**reci
@@ -16,11 +14,15 @@ import reactivemongo.bson.BSONObjectID
 class BucketManager {
   val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[String, Channel[Array[Byte]]]
 
-  def broadCastMessageToFileRoom(message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID) =
+  def broadCastMessageToFileRoom(bucket: Bucket, message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID) =
     writeMessage(message, bytes) match {
       case Some(bytesToSend) =>
         channelPerUser.synchronized {
-          (FileCaches.users(message.fd) - sender).foreach {
+          val users = bucket.teams.foldLeft(Set.empty[BSONObjectID]) {
+            (res, id) => res + id
+          } - sender
+
+          users.foreach {
             case id if channelPerUser.get(id.stringify).nonEmpty =>
               Logger.debug(s"broadcast message: ${id.stringify} - $message - $bytes")
               channelPerUser(id.stringify).push(bytesToSend)

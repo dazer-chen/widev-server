@@ -1,93 +1,86 @@
 package models
 
-import lib.mongo.{Collection, SuperCollection}
-import lib.util.MD5
+import lib.mongo.Collection
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 import reactivemongo.core.commands.LastError
 
 import scala.concurrent.Future
+import lib.util.Implicits._
 
-/**
- * Created by thomastosoni on 8/31/14.
- */
+case class File(
+                 path: String,
+                 encoding: String,
+                 id: Int = 0
+                 )
 
-case class BucketFileHeader(
-                             path: String,
-                             md5: String,
-                             createdAt: DateTime = DateTime.now,
-                             updatedAt: DateTime = DateTime.now,
-                             version: Int = 0
-                             )
+object File {
+  implicit val handler = Macros.handler[File]
 
-object BucketFileHeader {
-  import lib.util.Implicits._
-  implicit val handler = Macros.handler[BucketFileHeader]
+  implicit val fileWrites = new Writes[File] {
+    override def writes(o: File): JsValue = Json.obj(
+      "path" -> o.path,
+      "id" -> o.id,
+      "encoding" -> o.encoding
+    )
+  }
+}
 
-  implicit val BucketFileHeaderWrites = new Writes[BucketFileHeader] {
-    def writes(model: BucketFileHeader) = Json.obj(
-      "path" -> model.path,
-      "md5" -> model.md5,
-      "createdAt" -> model.createdAt,
-      "updatedAt" -> model.updatedAt,
-      "version" -> model.version
+case class Informations(
+
+                         )
+
+object Informations {
+  implicit val handler = Macros.handler[File]
+
+  implicit val informationWrites = new Writes[Informations] {
+    override def writes(o: Informations): JsValue = Json.obj(
+
     )
   }
 }
 
 case class Bucket(
-											name: String,
-											owner: BSONObjectID,
-											teams: Set[BSONObjectID] = Set.empty,
-                      files: Map[String, BucketFileHeader] = Map.empty,
-                      createdAt: DateTime = DateTime.now,
-                      updatedAt: DateTime = DateTime.now,
-                      version: Int = 0,
-	                    _id: BSONObjectID = BSONObjectID.generate
-	                  )
-{
-  def physicalFilePath(filePath: String) = s"${owner.stringify}/${_id.stringify}/${MD5.hex_digest(filePath)}"
-}
+                   name: String,
+                   owner: BSONObjectID,
+                   version: Int = 0,
+                   teams: Set[BSONObjectID] = Set.empty,
+                   creation: DateTime = DateTime.now(),
+                   update: DateTime = DateTime.now(),
+                   files: Array[File] = Array.empty,
+                   _id: BSONObjectID = BSONObjectID.generate
+                   )
 
 object Bucket {
-  import lib.util.Implicits._
-
-  implicit object BSONBucketFileHeaderMapHandler extends BSONHandler[BSONDocument, Map[String, BucketFileHeader]] {
-    override def write(t: Map[String, BucketFileHeader]): BSONDocument = BSONDocument.apply(t.map {
-      case (k, fileHeader) => (k, BucketFileHeader.handler.write(fileHeader))
-    }.toTraversable)
-
-    override def read(bson: BSONDocument): Map[String, BucketFileHeader] = bson.elements.map {
-      case (k, fileHeader: BSONDocument) => (k, BucketFileHeader.handler.read(fileHeader))
-    }.toMap
-  }
-
   implicit val handler = Macros.handler[Bucket]
 
-	implicit val BucketWrites = new Writes[Bucket] {
-		def writes(model: Bucket) = Json.obj(
-			"_id" -> model._id.stringify,
-			"name" -> model.name,
-			"owner" -> model.owner.stringify,
-      "teams" -> model.teams.map(_.stringify),
-      "files" -> Json.arr(model.files.map {
-        file => Json.toJsFieldJsValueWrapper(file._2)
-      }.toSeq:_*),
-      "createdAt" -> model.createdAt,
-      "updatedAt" -> model.updatedAt,
-      "version" -> model.version
-		)
-	}
+  implicit val BucketWrites = new Writes[Bucket] {
+    override def writes(o: Bucket) = Json.obj(
+      "_id" -> o._id.stringify,
+      "files" -> o.files,
+      "informations" -> Json.obj(
+        "creation" -> o.creation,
+        "update" -> o.update,
+        "name" -> o.name,
+        "version" -> o.version
+      ),
+      "navigator" -> Json.arr( // TODO generate a valid navigator handling directories
+        Json.obj(
+          "children" -> Json.arr(0),
+          "id" -> 1,
+          "kind" -> 0,
+          "name" -> "root",
+          "path" -> ""
+        )
+      )
+    )
+  }
 
-	def generate = Bucket(
-		name = BSONObjectID.generate.stringify,
-		owner = BSONObjectID.generate,
-    teams = Set((0 to 10).map(_ => BSONObjectID.generate):_*)
-  )
+	def generate = ???
 }
 
 case class Buckets(db: DefaultDB) extends Collection[Bucket] {
@@ -100,24 +93,12 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
   override def relations = Seq(factory.teams)
 
   def find(name: String, owner: BSONObjectID): Future[Option[Bucket]] =
-		collection.find(BSONDocument("name" -> name, "owner" -> owner)).one[Bucket]
+		collection.find(
+      BSONDocument("name" -> name, "owner" -> owner)
+    ).one[Bucket]
 
 	def deleteByName(name: String): Future[LastError] =
 		collection.remove(BSONDocument("name" -> name))
-
-  def setFileHeader(id: BSONObjectID, fileHeader: BucketFileHeader) = {
-    import lib.util.Implicits.BSONDateTimeHandler
-
-    collection.update(BSONDocument("_id" -> id), BSONDocument(
-      "$set" -> BSONDocument(
-        s"files.${MD5.hex_digest(fileHeader.path)}" -> fileHeader,
-        "updatedAt" -> DateTime.now
-      ),
-      "$inc" -> BSONDocument(
-        "version" -> 1
-      )
-    ), upsert = true)
-  }
 
   def findByOwner(owner: BSONObjectID) = {
     collection.find(BSONDocument("owner" -> owner)).cursor[Bucket].collect[List]()
@@ -133,35 +114,11 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
     }
   }
 
-  def userCanRead(bucket: BSONObjectID, user: BSONObjectID) = {
+  def userCanReadAndEdit(bucket: BSONObjectID, user: BSONObjectID) = {
     find(bucket).flatMap {
       case Some(bucket) if bucket.owner == user => Future(true)
       case Some(bucket) => factory.teams.isUserInOneTeam(bucket.teams, user)
       case _ => Future(false)
-    }
-  }
-
-  def findFileHeader(id: BSONObjectID, filePath: String): Future[Option[BucketFileHeader]] = {
-    val filePathSum = MD5.hex_digest(filePath)
-
-    collection.find(BSONDocument(
-      "_id" -> id,
-      s"files.$filePathSum" -> BSONDocument(
-        "$exists" -> true
-      )),
-      BSONDocument(s"files.$filePathSum" -> true)
-    ).one[BSONDocument].map {
-      case Some(doc) =>
-        doc.getAs[BSONDocument]("files") match {
-          case Some(doc) =>
-            doc.getAs[BSONDocument](filePathSum) match {
-              case Some(doc) =>
-                Some(BucketFileHeader.handler.read(doc))
-              case None => None
-            }
-          case _ => None
-        }
-      case _ => None
     }
   }
 
@@ -183,28 +140,43 @@ case class Buckets(db: DefaultDB) extends Collection[Bucket] {
     )).map { _ => true }
   }
 
-  def findBucketInfos(id: BSONObjectID): Future[Option[Bucket]] =
-    collection.find(BSONDocument("_id" -> id), BSONDocument("files" -> false)).one[BSONDocument].map {
-      case Some(res) =>
-        Some(Bucket.handler.read(res ++ ("files" -> BSONDocument())))
-      case None => None
+  def findFileInBucket(bucketId: BSONObjectID, path: String): Future[Option[File]] = {
+    collection.find(BSONDocument("_id" -> bucketId, "files.path" -> path), BSONDocument("files.$" -> 1)).one[BSONDocument].map {
+      case Some(document) =>
+        document.getAs[File]("files")
+      case _ => None
     }
+  }
 
-  def deleteFileHeader(id: BSONObjectID, filePath: String): Future[Boolean] =
-    collection.update(BSONDocument("_id" -> id), BSONDocument(
-      "$unset" -> BSONDocument(
-        s"files.${MD5.hex_digest(filePath)}" -> "" // WTF were they thinking while designing the mongodb api ?!
+  def findBucketEnsuringFileExists(bucketId: BSONObjectID, path: String): Future[Option[Bucket]] = {
+    collection.find(BSONDocument("_id" -> bucketId, "files.path" -> path)).one[Bucket]
+  }
+
+  def removeFileFromBucket(bucketId: BSONObjectID, path: String): Future[Boolean] = {
+    collection.update(BSONDocument("_id" -> bucketId, "files.path" -> path), BSONDocument(
+      "$pull" -> BSONDocument(
+        "files" -> BSONDocument(
+          "path" -> path
+        )
       )
     )).map {
       case res if res.updated > 0 => true
       case _ => false
     }
+  }
 
-  override def save(model: Bucket): Future[Bucket] =
-    super.save(model.copy(updatedAt = DateTime.now(), version = model.version + 1))
+  def addFileToBucket(bucketId: BSONObjectID, file: File): Future[Boolean] = {
+    def update = collection.update(BSONDocument("_id" -> bucketId), BSONDocument(
+      "$push" -> BSONDocument(
+        "files" -> file
+      )
+    )).map(_ => true)
 
-  override def update(model: Bucket, upsert: Boolean = true): Future[Boolean] =
-    super.update(model.copy(updatedAt = DateTime.now(), version = model.version + 1), upsert)
+    findFileInBucket(bucketId, file.path).flatMap {
+      case Some(_) => removeFileFromBucket(bucketId, file.path).flatMap(_ => update)
+      case None => update
+    }
+  }
 
   def updateTeams(id: BSONObjectID, team: Set[BSONObjectID]): Future[Boolean] =
     collection.update(BSONDocument("_id" -> id), BSONDocument(

@@ -3,7 +3,7 @@ package lib.util
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import play.api.libs.json._
-import reactivemongo.bson.{BSONDateTime, BSONHandler}
+import reactivemongo.bson.{BSONObjectID, BSONDateTime, BSONHandler}
 
 /**
  * Created by trupin on 7/26/14.
@@ -22,4 +22,9 @@ object Implicits {
     override def reads(json: JsValue): JsResult[DateTime] =
       JsSuccess(DateTime.parse(json.toString(), DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")))
   }
+
+  implicit object JSONBSONObjectIDWriter extends Writes[BSONObjectID] {
+    override def writes(o: BSONObjectID): JsValue = Json.toJson(o.stringify)
+  }
+
 }

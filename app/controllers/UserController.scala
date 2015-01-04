@@ -1,18 +1,17 @@
 package controllers
 
-import jp.t2v.lab.play2.auth.{AsyncAuth, LoginLogout, AuthElement}
+import jp.t2v.lab.play2.auth.{AsyncAuth, AuthElement}
 import lib.mongo.DuplicateModel
 import lib.play2auth.LoginSuccess
 import managers.PluginManager
-import models.{Buckets, Standard, User, Users}
-import org.mindrot.jbcrypt.BCrypt
+import models.{Standard, User, Users}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsError, Reads, JsPath, Json}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsError, JsPath, Json, Reads}
 import play.api.mvc._
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
-import play.api.libs.functional.syntax._
 
 import scala.concurrent.Future
 

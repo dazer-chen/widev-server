@@ -1,20 +1,17 @@
 package controllers
 
-import fly.play.aws.PlayConfiguration
-import fly.play.aws.auth.AwsCredentials
-import fly.play.s3._
 import jp.t2v.lab.play2.auth.AuthElement
+import jp.t2v.lab.play2.stackc.RequestWithAttributes
 import lib.mongo.DuplicateModel
-import lib.util.{Crypto, MD5}
-import managers.BucketManager
+import lib.util.Crypto
+import managers.{FileManager, BucketManager}
 import models.{Bucket, _}
-import org.joda.time.{DateTimeZone, DateTime}
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.{Concurrent, Iteratee}
 import play.api.libs.json._
-import play.api.mvc.{BodyParsers, Controller, WebSocket}
+import play.api.mvc._
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import reactivemongo.bson.BSONObjectID
 
@@ -24,36 +21,29 @@ import scala.concurrent.Future
  * Created by thomastosoni on 8/31/14.
  */
 
-class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends Controller with AuthElement {
+class BucketController(buckets: Buckets) extends Controller with AuthElement {
   self: AuthConfigImpl =>
 
-  private[controllers] def uploadFileToS3(bucket: Bucket, filePath: String, contentType: String, bytes: Array[Byte]): Future[Unit] =
-    s3Bucket.initiateMultipartUpload(BucketFile(bucket.physicalFilePath(filePath), contentType)).flatMap {
-      initTicket =>
-        s3Bucket.uploadPart(initTicket, BucketFilePart(1, bytes)).flatMap {
-          partTicket =>
-            s3Bucket.completeMultipartUpload(initTicket, Seq(partTicket))
+  private def canReadAndEditBucket(id: String)(f: Bucket => Future[Result])(implicit req: RequestWithAttributes[_]) = {
+    val user = loggedIn
+
+    buckets.find(BSONObjectID(id)).flatMap {
+      case Some(bucket) =>
+        buckets.userCanReadAndEdit(BSONObjectID(id), user._id).flatMap {
+          case true =>
+            f(bucket)
+          case _ =>
+            Future(Unauthorized(s"Permission denied."))
         }
+      case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
     }
+  }
 
   def getBucket(id: String) = AsyncStack(AuthorityKey -> Standard) {
     implicit request =>
-      val user = loggedIn
-
-      buckets.find(BSONObjectID(id)).flatMap {
-        case Some(bucket) =>
-          buckets.userCanRead(BSONObjectID(id), user._id).map {
-            case true =>
-              val openedFilesNum = bucket.files.count {
-                case (k, v) if FileCaches.isOpen(bucket, v.path) => true
-                case _ => false
-              }
-
-              Ok(Json.toJson(bucket.copy(updatedAt = if (openedFilesNum > 0) DateTime.now else bucket.updatedAt)))
-            case _ =>
-              Unauthorized(s"You cannot access to this bucket.")
-          }
-        case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
+      canReadAndEditBucket(id) {
+        bucket =>
+          Future(Ok(Json.toJson(bucket)))
       }
   }
 
@@ -65,8 +55,6 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
 
   def updateTeams(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     implicit request =>
-      val user = loggedIn
-
       val teams = (request.body \ "teams").validate[Seq[String]]
 
       teams.fold(
@@ -74,9 +62,12 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
           Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
         },
         teams => {
-          buckets.updateTeams(BSONObjectID(id), teams.map(BSONObjectID(_)).toSet).map {
-            case true => Ok("")
-            case false => BadRequest("")
+          canReadAndEditBucket(id) {
+            _ =>
+              buckets.updateTeams(BSONObjectID(id), teams.map(BSONObjectID(_)).toSet).map {
+                case true => Ok
+                case false => BadRequest(s"Unable to update teams")
+              }
           }
         }
       )
@@ -84,9 +75,8 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
 
   def addTeam(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     implicit request =>
-      val user = loggedIn
-      buckets.find(BSONObjectID.apply(id)).flatMap {
-        case Some(bucket) => {
+      canReadAndEditBucket(id) {
+        bucket =>
           val team = (request.body \ "team").validate[String]
 
           team.fold(
@@ -95,19 +85,16 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
             },
             team => {
               buckets.addTeam(BSONObjectID.apply(id), BSONObjectID.apply(team)).map {
-                case true => Ok("")
+                case true => Ok
                 case _ => BadRequest(s"Unable to add the team $team")
               }
             }
           )
-        }
-        case None => Future(NotFound(s"Bucket $id not found"))
       }
   }
 
   def removeTeam(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     implicit request =>
-      val user = loggedIn
       buckets.find(BSONObjectID.apply(id)).flatMap {
         case Some(bucket) => {
           val team = (request.body \ "team").validate[String]
@@ -117,9 +104,12 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
               Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
             },
             team => {
-              buckets.removeTeam(BSONObjectID.apply(id), BSONObjectID.apply(team)).map {
-                case true => Ok("")
-                case _ => BadRequest(s"Unable to remove the team $team")
+              canReadAndEditBucket(id) {
+                bucket =>
+                  buckets.removeTeam(bucket._id, BSONObjectID.apply(team)).map {
+                    case true => Ok
+                    case _ => BadRequest(s"Unable to remove the team $team")
+                  }
               }
             }
           )
@@ -147,180 +137,83 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
       }
     }
 
-  // TODO check if the file is in memory
   def getFile(id: String) = AsyncStack(AuthorityKey -> Standard) {
-    request =>
+    implicit request =>
       val filePath = request.getQueryString("file-path")
+
       if (filePath.isEmpty)
-        Future(BadRequest(s"'name' parameter required."))
+        Future(BadRequest(s"'file-path' parameter required."))
       else
-        buckets.find(BSONObjectID(id)).flatMap {
-          case Some(bucket) =>
-            FileCaches.readAll(bucket, filePath.get) match {
-              case Some(content) =>
-                Future(Ok(content))
+        canReadAndEditBucket(id) {
+          bucket =>
+            buckets.findFileInBucket(bucket._id, filePath.get).map {
+              case Some(file) =>
+                Ok
               case None =>
-                s3Bucket.get(bucket.physicalFilePath(filePath.get)).map {
-                  case BucketFile(path, contentType, content, acl, headers) =>
-                    Ok(content) //.withHeaders(headers.getOrElse(Seq()).toSeq:_*)
-                }
+                NotFound(s"File '$filePath' not found")
             }
-          case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
         }
   }
 
-//  def getFileHeader(id: String) = AsyncStack(AuthorityKey -> Standard) {
-//    request =>
-//      val filePath = request.getQueryString("file-path")
-//      if (filePath.isEmpty)
-//        Future(BadRequest(s"'name' parameter required."))
-//      else
-//        buckets.find(BSONObjectID(id)).flatMap {
-//          case Some(bucket) =>
-//            s3Bucket.get(bucket.physicalFilePath(filePath.get)).map {
-//              case BucketFile(path, contentType, content, acl, headers) =>
-//                Ok(content).withHeaders(headers.getOrElse(Seq()).toSeq:_*)
-//            }
-//          case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
-//        }
-//  }
-
   def listFiles(id: String) = AsyncStack(AuthorityKey -> Standard) {
-    request =>
-      buckets.find(BSONObjectID(id)).map {
-        case Some(bucket) => Ok(Json.toJson(bucket.files.map {
-          f => Json.toJson(f._2 match {
-            case fileHeader if FileCaches.isOpen(bucket, fileHeader.path) =>
-              fileHeader.copy(updatedAt = DateTime.now())
-            case fileHeader => fileHeader
-          })
-        }))
-        case None => NotFound(s"Couldn't find bucket for id: $id")
+    implicit request =>
+
+      canReadAndEditBucket(id) {
+        bucket =>
+          buckets.userCanReadAndEdit(BSONObjectID(id), loggedIn._id).map {
+            case true =>
+              Ok(Json.toJson(bucket.files.map(_.path)))
+            case _ =>
+              Unauthorized(s"You cannot access to this bucket.")
+          }
       }
   }
 
-  // TODO check if the file is in memory
+  def removeFile(id: String) = AsyncStack(AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+      val filePath = request.getQueryString("file-path")
+
+      if (filePath.isEmpty)
+        Future(BadRequest(s"'file-path' parameter required."))
+      else
+        canReadAndEditBucket(id) {
+          bucket =>
+            buckets.removeFileFromBucket(bucket._id, filePath.get).map {
+              case true =>
+                FileManager.delete(bucket, filePath.get)
+                Ok // TODO broadcast to the connected team members
+              case _ =>
+                NotFound(s"Couldn't find file '$filePath'")
+            }
+        }
+  }
+
+  // TODO save in a local file
   def uploadFile(id: String) = AsyncStack(AuthorityKey -> Standard) {
     case request if request.body.asRaw.nonEmpty =>
       val filePath = request.getQueryString("file-path")
-      val contentType = request.getQueryString("content-type")
-      val user = loggedIn(request)
+      val encoding = request.getQueryString("encoding")
 
-      if (filePath.isEmpty || contentType.isEmpty)
+      if (filePath.isEmpty || encoding.isEmpty)
         Future(BadRequest("Missing parameter(s)."))
-      else {
-        val bsonId = BSONObjectID(id)
-        val fileContentSum = MD5.hex_digest(request.body.asRaw.get.asBytes().get)
-
-        buckets.findBucketInfos(bsonId).flatMap {
-          case Some(bucket) =>
-            val fd = FileCaches.open(bucket, user._id, filePath.get)
-            val cacheFileContentSum = MD5.hex_digest(FileCaches.readAll(fd, user._id).get)
-
-            if (fileContentSum != cacheFileContentSum) {
-              FileCaches.clear(fd, user._id)
-              FileCaches.insert(fd, user._id, 0, request.body.asRaw.get.asBytes().get)
-
-              // broadcast the file replacement -> this case should never happen
-//              BucketManager.broadCastMessageToFileRoom(InsertFileAction(fd, None, 0), request.body.asRaw.get.asBytes(), user._id)
-
-              FileCaches.willClose(fd, user._id) match {
-                case true => // we need to upload the file so we don't loose data
-                  FileCaches.close(fd, user._id)
-                  buckets.findFileHeader(bsonId, filePath.get).flatMap {
-                    case Some(fileHeader) if fileHeader.md5 == fileContentSum =>
-                      Logger.debug(s"$filePath is not modified, not uploaded thought")
-                      Future(Ok)
-                    case res =>
-                      val fileHeader = res.getOrElse(BucketFileHeader(filePath.get, fileContentSum)).copy(md5 = fileContentSum, updatedAt = DateTime.now)
-                      buckets.setFileHeader(BSONObjectID(id), fileHeader = fileHeader).flatMap {
-                        _ =>
-                          Logger.debug(s"Uploading $filePath to bucket ${bucket.name}")
-                          uploadFileToS3(bucket, filePath.get, contentType.get, request.body.asRaw.get.asBytes().get).map {
-                            _ => Ok
-                          }
-                      }
-                  }
-                case false => Future(Ok) // will stay in cache anyway
-              }
+      else
+        canReadAndEditBucket(id)({
+          bucket =>
+            buckets.addFileToBucket(bucket._id, File(filePath.get, encoding.get)).flatMap {
+              case true =>
+                FileManager.insert(bucket, filePath.get, 0, request.body.asRaw.get.asBytes().get).map {
+                  case true =>
+                    Ok
+                  case _ =>
+                    InternalServerError(s"Couldn't create file s'$filePath'")
+                }
+              case _ =>
+                Future(InternalServerError(s"Couldn't create file s'$filePath'"))
             }
-            else Future(Ok)
-          case None => Future(NotFound(s"Couldn't find bucket for id: $id"))
-        }
-      }
+        })(request)
     case _ =>
       Future(BadRequest("Content-Type must be set to 'application/octet-stream'."))
-  }
-
-  def deleteFile(id: String) = AsyncStack(AuthorityKey -> Standard) {
-    request =>
-      val filePath = request.getQueryString("file-path")
-      if (filePath.isEmpty)
-        Future(BadRequest(s"'name' parameter required."))
-      else
-        buckets.findBucketInfos(BSONObjectID(id)).flatMap {
-          case Some(bucket) =>
-            buckets.deleteFileHeader(BSONObjectID(id), filePath.get).flatMap {
-              case true =>
-                s3Bucket.remove(bucket.physicalFilePath(filePath.get)).map {
-                  _ => Ok
-                }
-              case false => Future(NotFound(s"Couldn't find file at path '$filePath.get' in bucket '$id'"))
-            }
-          case None =>
-            Future(NotFound(s"Couldn't find bucket for id: $id"))
-        }
-  }
-
-  def openFileCache(id: String) = AsyncStack(AuthorityKey -> Standard) {
-    implicit request =>
-      val user = loggedIn
-      val filePath = request.getQueryString("file-path")
-
-      if (filePath.isEmpty)
-        Future(BadRequest(s"'name' parameter required."))
-      else {
-        buckets.findBucketInfos(BSONObjectID(id)).flatMap {
-          case Some(bucket) =>
-            val alreadyOpen = FileCaches.isOpen(bucket, filePath.get)
-            val fd = FileCaches.open(bucket, user._id, filePath.get)
-
-            if (!alreadyOpen)
-              s3Bucket.get(bucket.physicalFilePath(filePath.get)).map {
-                case BucketFile(_, contentType, content, acl, headers) =>
-                  FileCaches.insert(fd, user._id, 0, content, Some(contentType))
-                  Ok(fd)
-              }
-            else Future(Ok(fd))
-
-          case None =>
-            Future(NotFound(s"Couldn't find bucket for id: $id"))
-        }
-      }
-  }
-
-  def closeFileCache(id: String, fd: String) = AsyncStack(AuthorityKey -> Standard) {
-    implicit request =>
-      val user = loggedIn
-      val filePath = FileCaches.filePath(fd)
-      val contentType = FileCaches.fileContentType(fd).getOrElse("application/octet-stream")
-
-      if (FileCaches.willClose(fd, user._id))
-        buckets.findBucketInfos(BSONObjectID(id)).flatMap {
-          case Some(bucket) =>
-            uploadFileToS3(bucket, filePath.get, contentType, FileCaches.readAll(fd, user._id).get).map {
-              _ =>
-                FileCaches.close(fd, user._id)
-                Ok
-            }
-          case None =>
-            Future(NotFound(s"Couldn't find bucket for id: $id"))
-        }
-      else
-        Future(FileCaches.close(fd, user._id) match {
-          case true => Ok
-          case false => NotFound(s"Couldn't find any fd '$fd' in bucket '$id' for your session")
-        })
   }
 
   /* -------- web socket handling -------- */
@@ -365,9 +258,16 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
           case Some(token) =>
             idContainer.get(token) match {
               case Some(userId) =>
-                envelop.message.action(BSONObjectID(userId), envelop.bytes, (message, bytes) =>
-                  BucketManager.broadCastMessageToFileRoom(message, bytes, BSONObjectID(userId))
-                )
+                // NOTE this might be a little heavy !?
+                val message = envelop.message
+                buckets.findBucketEnsuringFileExists(BSONObjectID(message.bucketId), message.filePath).map {
+                  case Some(bucket) =>
+                    message.action(bucket, envelop.bytes, (messageToBroadcast, bytes) =>
+                      BucketManager.broadCastMessageToFileRoom(bucket, messageToBroadcast, bytes, BSONObjectID(userId))
+                    )
+                  case None =>
+                    Logger.warn(s"Bucket '${message.bucketId}' with file '${envelop.message.filePath}' not found.")
+                }
               case None =>
                 Logger.warn(s"Unknown session token: '${envelop.message.sessionToken.get}'.")
             }
@@ -380,6 +280,5 @@ class BucketController(buckets: Buckets, s3Bucket: fly.play.s3.Bucket) extends C
 }
 
 object BucketController extends BucketController(
-  Buckets(ReactiveMongoPlugin.db),
-  S3(PlayConfiguration("s3.bucket"))(AwsCredentials.fromConfiguration)
+  Buckets(ReactiveMongoPlugin.db)
 ) with AuthConfigImpl

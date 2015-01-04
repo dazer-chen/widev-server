@@ -31,17 +31,13 @@ GET           /buckets/ws                           controllers.BucketController
 GET           /buckets/:id                          controllers.BucketController.getBucket(id: String)
 GET           /buckets/:id/files                    controllers.BucketController.listFiles(id: String)
 GET           /buckets/:id/file                     controllers.BucketController.getFile(id: String)
-#GET           /buckets/:id/fileHeader               controllers.BucketController.getFileHeader(id: String)
 POST          /buckets                              controllers.BucketController.createBucket
 GET           /buckets                              controllers.BucketController.getBuckets
-POST          /buckets/:id/file                     controllers.BucketController.uploadFile(id: String)
-DELETE        /buckets/:id/file                     controllers.BucketController.deleteFile(id: String)
+POST          /buckets/:id/files                    controllers.BucketController.uploadFile(id: String)
+DELETE        /buckets/:id/files                    controllers.BucketController.removeFile(id: String)
 PUT           /buckets/:id/teams                    controllers.BucketController.updateTeams(id: String)
 PUT           /buckets/:id/teams/add                controllers.BucketController.addTeam(id: String)
 PUT           /buckets/:id/teams/remove             controllers.BucketController.removeTeam(id: String)
-
-GET           /buckets/:id/file/open                controllers.BucketController.openFileCache(id: String)
-PUT           /buckets/:id/file/:fd/close           controllers.BucketController.closeFileCache(id: String, fd: String)
 
 #Teams
 GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
