@@ -31,9 +31,10 @@ GET           /buckets/ws                           controllers.BucketController
 GET           /buckets/:id                          controllers.BucketController.getBucket(id: String)
 GET           /buckets/:id/files                    controllers.BucketController.listFiles(id: String)
 GET           /buckets/:id/file                     controllers.BucketController.getFile(id: String)
+PUT           /buckets/:id                          controllers.BucketController.updateBucket(id: String)
 POST          /buckets                              controllers.BucketController.createBucket
 GET           /buckets                              controllers.BucketController.getBuckets
-POST          /buckets/:id/files                    controllers.BucketController.uploadFile(id: String)
+POST          /buckets/:id/file                     controllers.BucketController.uploadFile(id: String)
 DELETE        /buckets/:id/files                    controllers.BucketController.removeFile(id: String)
 PUT           /buckets/:id/teams                    controllers.BucketController.updateTeams(id: String)
 PUT           /buckets/:id/teams/add                controllers.BucketController.addTeam(id: String)

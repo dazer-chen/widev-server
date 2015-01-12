@@ -63,12 +63,16 @@ object FileManager {
     val ppath = physicalPath(bucket, filePath)
 
     try {
+      if (!Files.exists(ppath))
+        Files.createDirectories(physicalPath(bucket, ""))
+
       implicit val channel = AsynchronousFileChannel.open(ppath, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
+
       channel.force(true)
 
-      read(position, channel.size().toInt).flatMap {
+      read(position, channel.size().toInt - position).flatMap {
         bytesToMove =>
-          write(bytesToMove ++ bytes, position).map {
+          write(bytes ++ bytesToMove, position).map {
             _ =>
               channel.close()
               true
@@ -89,6 +93,9 @@ object FileManager {
     val ppath = physicalPath(bucket, filePath)
 
     try {
+      if (!Files.exists(ppath))
+        Files.createDirectories(physicalPath(bucket, ""))
+
       implicit val channel = AsynchronousFileChannel.open(ppath, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
       channel.force(true)
 
@@ -117,6 +124,9 @@ object FileManager {
     val ppath = physicalPath(bucket, filePath)
 
     try {
+      if (!Files.exists(ppath))
+        Files.createDirectories(physicalPath(bucket, ""))
+
       implicit val channel = AsynchronousFileChannel.open(ppath, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
       channel.force(true)
 
@@ -140,6 +150,9 @@ object FileManager {
     val ppath = physicalPath(bucket, filePath)
 
     try {
+      if (!Files.exists(ppath))
+        Files.createDirectories(physicalPath(bucket, ""))
+
       implicit val channel = AsynchronousFileChannel.open(ppath, StandardOpenOption.READ)
 
       read(0, channel.size().toInt).map {

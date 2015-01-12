@@ -2,10 +2,11 @@ package controllers
 
 import jp.t2v.lab.play2.auth.AuthElement
 import jp.t2v.lab.play2.stackc.RequestWithAttributes
-import lib.mongo.DuplicateModel
 import lib.util.Crypto
-import managers.{FileManager, BucketManager}
+import lib.util.Implicits.BSONDateTimeHandler
+import managers.{BucketManager, FileManager}
 import models.{Bucket, _}
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
@@ -13,7 +14,7 @@ import play.api.libs.iteratee.{Concurrent, Iteratee}
 import play.api.libs.json._
 import play.api.mvc._
 import play.modules.reactivemongo.ReactiveMongoPlugin
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
 
 import scala.concurrent.Future
 
@@ -21,7 +22,7 @@ import scala.concurrent.Future
  * Created by thomastosoni on 8/31/14.
  */
 
-class BucketController(buckets: Buckets) extends Controller with AuthElement {
+class BucketController(buckets: Buckets, teams: Teams) extends Controller with AuthElement {
   self: AuthConfigImpl =>
 
   private def canReadAndEditBucket(id: String)(f: Bucket => Future[Result])(implicit req: RequestWithAttributes[_]) = {
@@ -50,7 +51,26 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
   def getBuckets = AsyncStack(AuthorityKey -> Standard) {
     implicit request =>
       val user = loggedIn
-      buckets.findByUser(user._id).map(bs => Ok(Json.toJson(bs)))
+
+      val name = request.getQueryString("name")
+      if (name.isEmpty)
+        buckets.findByUser(user._id).map(
+          bs =>
+            Ok(Json.toJson(bs))
+        )
+      else {
+        buckets.find(name.get).flatMap {
+          case Some(bucket) =>
+            buckets.userCanReadAndEdit(bucket._id, loggedIn._id).map {
+              case true =>
+                Ok(Json.toJson(bucket))
+              case _ =>
+                Unauthorized(s"Permission denied.")
+            }
+          case _ =>
+            Future(NotFound(s"Couldn't find bucket for name: '${name.get}'"))
+        }
+      }
   }
 
   def updateTeams(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
@@ -120,22 +140,77 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
 
   def createBucket = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
     implicit request =>
-      val bucketName = request.getQueryString("name")
       val user = loggedIn
 
-      if (bucketName.isEmpty) {
-        Future(BadRequest(s"'name' parameter required."))
-      }
-      else {
-        buckets.create(Bucket(bucketName.get, user._id)).map {
-          bucket =>
-            Ok(Json.toJson(bucket))
-        } recover {
-          case err: DuplicateModel =>
-            NotAcceptable(s"User already exists.")
-        }
-      }
-    }
+      import models.Bucket._
+
+      val bucket = request.body.validate[CreateBucket]
+
+      bucket.fold(
+        errors => {
+          Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+        },
+        bucket => {
+          val toInsert = Bucket(
+            name = bucket.informations.name,
+            owner = user._id,
+            version = bucket.informations.version,
+            files = bucket.files,
+            navigator = bucket.navigator,
+            project = bucket.project,
+            targets = bucket.targets
+          )
+          buckets.collection.insert(toInsert).map {
+            _ =>
+              Ok(Json.toJson(toInsert))
+          }.recover {
+            case e: Throwable =>
+              Logger.error("Couldn't create bucket", e)
+              NotAcceptable(s"Bucket already exists.")
+          }
+        })
+  }
+
+  def updateBucket(id: String) = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+
+      import models.Bucket._
+
+      val bucket = request.body.validate[CreateBucket]
+
+      bucket.fold(
+        errors => {
+          Future(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toFlatJson(errors))))
+        },
+        bucket => {
+          buckets.collection.update(BSONDocument("_id" -> BSONObjectID(id)),
+            BSONDocument(
+              "$set" -> BSONDocument(
+                "name" -> bucket.informations.name,
+                "version" -> bucket.informations.version,
+                "files" -> bucket.files,
+                "navigator" -> bucket.navigator,
+                "project" -> bucket.project,
+                "targets" -> bucket.targets,
+                "update" -> BSONDateTimeHandler.write(DateTime.now(DateTimeZone.UTC))
+              )
+            )
+          ).flatMap {
+            _ =>
+              buckets.find(BSONObjectID(id)).map {
+                case Some(bucket) =>
+                  Ok(Json.toJson(bucket))
+                case None =>
+                  InternalServerError
+              }
+          }.recover {
+            case e: Throwable =>
+              Logger.error("Couldn't create bucket", e)
+              NotAcceptable(s"Bucket already exists.")
+          }
+        })
+  }
 
   def getFile(id: String) = AsyncStack(AuthorityKey -> Standard) {
     implicit request =>
@@ -146,11 +221,14 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
       else
         canReadAndEditBucket(id) {
           bucket =>
-            buckets.findFileInBucket(bucket._id, filePath.get).map {
+            buckets.findFileInBucket(bucket._id, filePath.get).flatMap {
               case Some(file) =>
-                Ok
+                FileManager.readAll(bucket, filePath.get).map {
+                  case Some(content) => Ok(content)
+                  case None => InternalServerError
+                }
               case None =>
-                NotFound(s"File '$filePath' not found")
+                Future(NotFound(s"File '$filePath' not found"))
             }
         }
   }
@@ -200,9 +278,10 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
       else
         canReadAndEditBucket(id)({
           bucket =>
-            buckets.addFileToBucket(bucket._id, File(filePath.get, encoding.get)).flatMap {
+            buckets.addFileToBucket(bucket._id, filePath.get, encoding.get).flatMap {
               case true =>
-                FileManager.insert(bucket, filePath.get, 0, request.body.asRaw.get.asBytes().get).map {
+                FileManager.delete(bucket, filePath.get)
+                FileManager.replace(bucket, filePath.get, 0, request.body.asRaw.get.asBytes().get).map {
                   case true =>
                     Ok
                   case _ =>
@@ -262,9 +341,10 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
                 val message = envelop.message
                 buckets.findBucketEnsuringFileExists(BSONObjectID(message.bucketId), message.filePath).map {
                   case Some(bucket) =>
-                    message.action(bucket, envelop.bytes, (messageToBroadcast, bytes) =>
-                      BucketManager.broadCastMessageToFileRoom(bucket, messageToBroadcast, bytes, BSONObjectID(userId))
-                    )
+                    message.action(bucket, envelop.bytes, (messageToBroadcast, bytes) => {
+                      buckets.markAsUpdated(bucket._id)
+                      BucketManager.broadCastMessageToFileRoom(bucket, messageToBroadcast, bytes, BSONObjectID(userId))(teams)
+                    })
                   case None =>
                     Logger.warn(s"Bucket '${message.bucketId}' with file '${envelop.message.filePath}' not found.")
                 }
@@ -280,5 +360,6 @@ class BucketController(buckets: Buckets) extends Controller with AuthElement {
 }
 
 object BucketController extends BucketController(
-  Buckets(ReactiveMongoPlugin.db)
+  Buckets(ReactiveMongoPlugin.db),
+  Teams(ReactiveMongoPlugin.db)
 ) with AuthConfigImpl

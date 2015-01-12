@@ -3,10 +3,11 @@ package managers
 import java.nio.{ByteBuffer, ByteOrder}
 
 import messages.{FileAction, MessageEnvelop}
-import models.Bucket
+import models._
 import play.api.Logger
 import play.api.libs.iteratee.Concurrent.Channel
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**reci
  * Created by trupin on 10/31/14.
@@ -14,20 +15,28 @@ import reactivemongo.bson.BSONObjectID
 class BucketManager {
   val channelPerUser = scala.collection.mutable.LinkedHashMap.empty[String, Channel[Array[Byte]]]
 
-  def broadCastMessageToFileRoom(bucket: Bucket, message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID) =
+  def broadCastMessageToFileRoom(bucket: Bucket, message: FileAction, bytes: Option[Array[Byte]], sender: BSONObjectID)(teams: Teams) =
     writeMessage(message, bytes) match {
       case Some(bytesToSend) =>
         channelPerUser.synchronized {
-          val users = bucket.teams.foldLeft(Set.empty[BSONObjectID]) {
-            (res, id) => res + id
-          } - sender
 
-          users.foreach {
-            case id if channelPerUser.get(id.stringify).nonEmpty =>
-              Logger.debug(s"broadcast message: ${id.stringify} - $message - $bytes")
-              channelPerUser(id.stringify).push(bytesToSend)
-            case id =>
-              Logger.warn(s"No openned channel for user: '$id'")
+          teams.collection.find(BSONDocument(
+            "_id" -> BSONDocument(
+              "$in" -> bucket.teams
+            )
+          )).cursor[Team].collect[Set]().map {
+            ts =>
+              val us = (ts.foldLeft(Set.empty[BSONObjectID]) {
+                (res, t) => (res ++ t.users) + t.owner
+              } + bucket.owner) - sender
+
+              us.foreach {
+                case id if channelPerUser.get(id.stringify).nonEmpty =>
+                  Logger.debug(s"broadcast message: ${id.stringify} - $message - $bytes")
+                  channelPerUser(id.stringify).push(bytesToSend)
+                case id =>
+                  Logger.warn(s"No openned channel for user: '${id.stringify}'")
+              }
           }
         }
       case _ =>

@@ -84,12 +84,17 @@ case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
 		collection.find(BSONDocument("owner" -> owner)).cursor[Team].collect[List]()
 
   def findByUser(user: BSONObjectID) =
-    collection.find(BSONDocument("users" -> user)).cursor[Team].collect[List]()
+    collection.find(BSONDocument("users" -> user)).cursor[Team].collect[Set]().flatMap {
+      teamsByUser =>
+        findByOwner(user).map(_ ++ teamsByUser)
+    }
 
   def isUserInOneTeam(teams: Set[BSONObjectID], user: BSONObjectID) =
     collection.find(BSONDocument(
-      "_id" -> BSONDocument("$in" -> teams),
-      "users" -> BSONDocument("$in" -> BSONArray(user))
+      "$or" -> BSONArray(
+        BSONDocument("_id" -> BSONDocument("$in" -> teams)),
+        BSONDocument("users" -> BSONDocument("$in" -> BSONArray(user)))
+      )
     )).one[Team].map {
       case None => false
       case _ => true
