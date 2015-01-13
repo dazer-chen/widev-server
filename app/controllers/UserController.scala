@@ -20,7 +20,7 @@ import scala.concurrent.Future
 /**
  * Created by gaetansenn on 17/08/2014.
  */
-class UserController(users: Users) extends Controller with AuthElement with LoginSuccess with AsyncAuth {
+class UserController(users: Users, pluginManager: PluginManager) extends Controller with AuthElement with LoginSuccess with AsyncAuth {
   self: AuthConfigImpl =>
 
   def getUser(id: String) = AsyncStack(AuthorityKey -> Standard) { request =>
@@ -86,4 +86,4 @@ class UserController(users: Users) extends Controller with AuthElement with Logi
 
 }
 
-object UserController extends UserController(Users(ReactiveMongoPlugin.db)) with AuthConfigImpl
+object UserController extends UserController(Users(ReactiveMongoPlugin.db), PluginManager) with AuthConfigImpl
