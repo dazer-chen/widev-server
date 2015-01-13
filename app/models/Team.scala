@@ -7,6 +7,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.{Json, Writes}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.bson._
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -50,6 +51,8 @@ object Team {
 case class Teams(db: DefaultDB) extends Collection[Team] with AuthConfigImpl {
 
   val collection = db.collection[BSONCollection]("teams")
+
+  collection.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending), name = Some("NameUniqueIdx"), unique = true, sparse = true))
 
   def relations: Seq[SuperCollection] = Seq.empty
 
