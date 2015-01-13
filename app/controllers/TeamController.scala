@@ -1,5 +1,8 @@
 package controllers
 
+import lib.util.Parser
+import managers.PluginManager
+
 import scala.concurrent.Future
 
 import jp.t2v.lab.play2.auth.AuthElement
@@ -84,13 +87,18 @@ class TeamController(teams: Teams) extends Controller with AuthElement {
 				},
 				team => {
 					val user = loggedIn
-
-					teams.create(Team(team.name, user._id, team.users.map(BSONObjectID(_)))).map {
-						team => Ok(Json.toJson(team))
-					} recover {
+					val path = Parser.slugify(team.name)
+					teams.create(Team(team.name, user._id, team.users.map(BSONObjectID(_)))).flatMap {
+						teamModel => {
+							println("Create team with plugin Manager")
+							PluginManager.createTeam(user, teamModel).map {
+								_ => Ok(Json.toJson(teamModel))
+							}
+						}
+					}
+				} recover {
 						case err: DuplicateModel =>
 							NotAcceptable(s"Team already exists.")
-					}
 				}
 			)
 
