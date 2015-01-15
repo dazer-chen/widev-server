@@ -4,7 +4,7 @@ import jp.t2v.lab.play2.auth.AuthElement
 import jp.t2v.lab.play2.stackc.RequestWithAttributes
 import lib.util.Crypto
 import lib.util.Implicits.BSONDateTimeHandler
-import managers.{BucketManager, FileManager}
+import managers.{PluginManager, BucketManager, FileManager}
 import messages.{DeleteFileAction, MessageEnvelop, AddFileAction}
 import models.{Bucket, _}
 import org.joda.time.{DateTime, DateTimeZone}
@@ -161,9 +161,12 @@ class BucketController(buckets: Buckets, teams: Teams) extends Controller with A
             project = bucket.project,
             targets = bucket.targets
           )
-          buckets.collection.insert(toInsert).map {
-            _ =>
-              Ok(Json.toJson(toInsert))
+          buckets.collection.insert(toInsert).flatMap {
+            _ => {
+              PluginManager.createBucket(user, toInsert).map {
+                _ => Ok(Json.toJson(toInsert))
+              }
+            }
           }.recover {
             case e: Throwable =>
               Logger.error("Couldn't create bucket", e)
