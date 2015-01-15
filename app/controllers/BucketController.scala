@@ -5,6 +5,7 @@ import jp.t2v.lab.play2.stackc.RequestWithAttributes
 import lib.util.Crypto
 import lib.util.Implicits.BSONDateTimeHandler
 import managers.{BucketManager, FileManager}
+import messages.{DeleteFileAction, MessageEnvelop, AddFileAction}
 import models.{Bucket, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Logger
@@ -14,7 +15,7 @@ import play.api.libs.iteratee.{Concurrent, Iteratee}
 import play.api.libs.json._
 import play.api.mvc._
 import play.modules.reactivemongo.ReactiveMongoPlugin
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.{BSONObjectID, BSONDocument}
 
 import scala.concurrent.Future
 
@@ -326,12 +327,18 @@ class BucketController(buckets: Buckets, teams: Teams) extends Controller with A
   def receiveMessage(bytes: Array[Byte]): Unit =
     BucketManager.readMessage(bytes) match {
       case Some(envelop) =>
-        Logger.debug(s"received: $envelop")
+        Logger.debug(s"received: ${envelop.message}")
 
         val tokenValue = envelop.message.sessionToken match {
           case Some(token) => Crypto.verifyHmac(token)
           case _ => None
         }
+
+        def action(envelop: MessageEnvelop, bucket: Bucket, userId: String) =
+          envelop.message.action(bucket, envelop.bytes, (messageToBroadcast, bytes) => {
+            buckets.markAsUpdated(bucket._id)
+            BucketManager.broadCastMessageToFileRoom(bucket, messageToBroadcast, bytes, BSONObjectID(userId))(teams)
+          })(buckets)
 
         tokenValue match {
           case Some(token) =>
@@ -341,10 +348,14 @@ class BucketController(buckets: Buckets, teams: Teams) extends Controller with A
                 val message = envelop.message
                 buckets.findBucketEnsuringFileExists(BSONObjectID(message.bucketId), message.filePath).map {
                   case Some(bucket) =>
-                    message.action(bucket, envelop.bytes, (messageToBroadcast, bytes) => {
-                      buckets.markAsUpdated(bucket._id)
-                      BucketManager.broadCastMessageToFileRoom(bucket, messageToBroadcast, bytes, BSONObjectID(userId))(teams)
-                    })
+                    action(envelop, bucket, userId)
+                  case None if message.typeValue == AddFileAction.typeValue || message.typeValue == DeleteFileAction.typeValue =>
+                    buckets.find(BSONObjectID(message.bucketId)).map {
+                      case Some(bucket) =>
+                        action(envelop, bucket, userId)
+                      case None =>
+                        Logger.warn(s"Bucket '${message.bucketId}' not found.")
+                    }
                   case None =>
                     Logger.warn(s"Bucket '${message.bucketId}' with file '${envelop.message.filePath}' not found.")
                 }

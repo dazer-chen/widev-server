@@ -32,8 +32,15 @@ class BucketManager {
 
               us.foreach {
                 case id if channelPerUser.get(id.stringify).nonEmpty =>
-                  Logger.debug(s"broadcast message: ${id.stringify} - $message - $bytes")
-                  channelPerUser(id.stringify).push(bytesToSend)
+                  Logger.debug(s"broadcast message: ${id.stringify} - ${message.typeValue} - $bytes")
+
+                  try {
+                    channelPerUser(id.stringify).push(bytesToSend)
+                  } catch {
+                    case e: Exception =>
+                      Logger.warn("BucketManager failed to broadcast", e)
+                      channelPerUser.remove(id.stringify)
+                  }
                 case id =>
                   Logger.warn(s"No openned channel for user: '${id.stringify}'")
               }
