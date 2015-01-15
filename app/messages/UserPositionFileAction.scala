@@ -1,6 +1,6 @@
 package messages
 
-import models.{Buckets, Bucket}
+import models.{User, Buckets, Bucket}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -11,7 +11,8 @@ case class UserPositionFileAction(bucketId: String,
                                   filePath: String,
                                   sessionToken: Option[String],
                                   position: Int,
-                                  userEmail: String) extends FileAction
+                                  userEmail: String,
+                                  userId: String) extends FileAction
 {
   override val typeValue: Int = UserPositionFileAction.typeValue
 
@@ -28,7 +29,8 @@ object UserPositionFileAction {
       (JsPath \ "filePath").read[String] and
       (JsPath \ "sessionToken").read[Option[String]] and
       (JsPath \ "position").read[Int] and
-      (JsPath \ "userEmail").read[String]
+      (JsPath \ "userEmail").read[String] and
+      (JsPath \ "userId").read[String]
     )(UserPositionFileAction.apply _)
 
   implicit val writes: Writes[UserPositionFileAction] = new Writes[UserPositionFileAction] {
@@ -37,7 +39,8 @@ object UserPositionFileAction {
       "filePath" -> o.filePath,
       "sessionToken" -> o.sessionToken,
       "position" -> o.position,
-      "userEmail" -> o.userEmail
+      "userEmail" -> o.userEmail,
+      "userId" -> o.userId
     )
   }
 }

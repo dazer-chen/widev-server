@@ -1,6 +1,6 @@
 package messages
 
-import models.{Buckets, Bucket}
+import models.{User, Users, Buckets, Bucket}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -10,7 +10,8 @@ import play.api.libs.json._
 case class UserDisconnectionFileAction(bucketId: String,
                                        filePath: String,
                                        sessionToken: Option[String],
-                                       userEmail: String) extends FileAction
+                                       userEmail: String,
+                                       userId: String) extends FileAction
 {
   val typeValue = UserDisconnectionFileAction.typeValue
 
@@ -28,7 +29,8 @@ object UserDisconnectionFileAction {
     (JsPath \ "bucketId").read[String] and
       (JsPath \ "filePath").read[String] and
       (JsPath \ "sessionToken").read[Option[String]] and
-      (JsPath \ "userEmail").read[String]
+      (JsPath \ "userEmail").read[String] and
+      (JsPath \ "userId").read[String]
     )(UserDisconnectionFileAction.apply _)
 
   implicit val writes: Writes[UserDisconnectionFileAction] = new Writes[UserDisconnectionFileAction] {
@@ -36,7 +38,8 @@ object UserDisconnectionFileAction {
       "bucketId" -> o.bucketId,
       "filePath" -> o.filePath,
       "sessionToken" -> o.sessionToken,
-      "userEmail" -> o.userEmail
+      "userEmail" -> o.userEmail,
+      "userId" -> o.userId
     )
   }
 }

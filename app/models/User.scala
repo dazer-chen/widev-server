@@ -1,5 +1,7 @@
 package models
 
+import java.util.concurrent.ConcurrentHashMap
+
 import lib.mongo.{Collection, SuperCollection}
 import org.mindrot.jbcrypt.BCrypt
 import play.api.libs.json.{JsBoolean, Json, Writes}
@@ -47,7 +49,6 @@ object User {
     firstName = Some("test first name"),
     lastName = Some("test last name")
   )
-
 }
 
 case class Users(db: DefaultDB) extends Collection[User] {

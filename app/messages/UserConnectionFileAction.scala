@@ -12,7 +12,8 @@ import play.api.libs.json._
 case class UserConnectionFileAction(bucketId: String,
                                     filePath: String,
                                     sessionToken: Option[String],
-                                    userEmail: String) extends FileAction
+                                    userEmail: String,
+                                    userId: String) extends FileAction
 {
   val typeValue = UserConnectionFileAction.typeValue
 
@@ -30,7 +31,8 @@ object UserConnectionFileAction {
     (JsPath \ "bucketId").read[String] and
       (JsPath \ "filePath").read[String] and
       (JsPath \ "sessionToken").read[Option[String]] and
-      (JsPath \ "userEmail").read[String]
+      (JsPath \ "userEmail").read[String] and
+      (JsPath \ "userId").read[String]
     )(UserConnectionFileAction.apply _)
 
   implicit val writes: Writes[UserConnectionFileAction] = new Writes[UserConnectionFileAction] {
@@ -38,7 +40,8 @@ object UserConnectionFileAction {
       "bucketId" -> o.bucketId,
       "filePath" -> o.filePath,
       "sessionToken" -> o.sessionToken,
-      "userEmail" -> o.userEmail
+      "userEmail" -> o.userEmail,
+      "userId" -> o.userId
     )
   }
 }
