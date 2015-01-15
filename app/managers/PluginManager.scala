@@ -1,6 +1,6 @@
 package managers
 
-import models.{Team, User, Plugins}
+import models.{Bucket, Team, User, Plugins}
 import play.api.http.{HeaderNames, ContentTypeOf, Writeable}
 import play.api.libs.json.{JsString, Json}
 import play.api.libs.ws.WS
@@ -32,6 +32,16 @@ class PluginManager(plugins: Plugins) {
         }
       }
   }
+
+  def createBucket(user: User, bucket: Bucket) = broadcastToAll("POST", "/workspace", (request: WSRequestHolder) => {
+    val body = Json.obj(
+    "userId" -> JsString(user._id.stringify),
+    "id" -> JsString(bucket._id.stringify),
+    "name" -> JsString(bucket.name)
+    )
+
+    request.withBody(body)
+  })
 
   def createTeam(user: User, team: Team) = broadcastToAll("POST", "/teams", (request: WSRequestHolder) => {
     val body = Json.obj(
