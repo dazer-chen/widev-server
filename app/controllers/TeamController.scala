@@ -12,21 +12,38 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{BodyParsers, Controller}
 import play.modules.reactivemongo.ReactiveMongoPlugin
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
 
 import scala.concurrent.Future
 
 /**
  * Created by benjamincanac on 23/10/2014.
  */
-class TeamController(teams: Teams) extends Controller with AuthElement {
+class TeamController(teams: Teams, users: Users) extends Controller with AuthElement {
 	self: AuthConfigImpl =>
 
 	def getTeam(id: String) = AsyncStack(AuthorityKey -> Standard) {
 		request =>
-			teams.find(BSONObjectID(id)).map {
-				case Some(team) => Ok(Json.toJson(team))
-				case None => NotFound(s"Couldn't find team for id: $id")
+			import lib.util.Implicits._
+
+			teams.find(BSONObjectID(id)).flatMap {
+				case Some(team) =>
+					users.collection.find(BSONDocument(
+							"_id" -> BSONDocument(
+								"$in" -> team.users
+							)
+					)).cursor[User].collect[List]().map {
+						users =>
+							Ok(Json.obj(
+								"name" -> team.name,
+								"owner" -> team.owner.stringify,
+								"users" -> users.map(_.email),
+								"createdAt" -> team.createdAt,
+								"updatedAt" -> team.updatedAt,
+								"_id" -> team._id.stringify
+							))
+					}
+				case None => Future(NotFound(s"Couldn't find team for id: $id"))
 			}
 	}
 
@@ -90,7 +107,6 @@ class TeamController(teams: Teams) extends Controller with AuthElement {
 					val path = Parser.slugify(team.name)
 					teams.create(Team(team.name, user._id, team.users.map(BSONObjectID(_)))).flatMap {
 						teamModel => {
-							println("Create team with plugin Manager")
 							PluginManager.createTeam(user, teamModel).map {
 								_ => Ok(Json.toJson(teamModel))
 							}
@@ -121,4 +137,4 @@ class TeamController(teams: Teams) extends Controller with AuthElement {
 	}
 }
 
-object TeamController extends TeamController(Teams(ReactiveMongoPlugin.db)) with AuthConfigImpl
+object TeamController extends TeamController(Teams(ReactiveMongoPlugin.db), Users(ReactiveMongoPlugin.db)) with AuthConfigImpl
