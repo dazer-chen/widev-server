@@ -9,6 +9,7 @@ import play.api.mvc.Request
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
@@ -32,6 +33,15 @@ class PluginManager(plugins: Plugins) {
         }
       }
   }
+
+  def asignTeamToBucket(bucketId: String, teamId: String) = broadcastToAll("POST", "/workspace", (request: WSRequestHolder) => {
+    val body = Json.obj(
+      "workspaceId" -> JsString(bucketId),
+      "teamId" -> JsString(teamId)
+    )
+
+    request.withBody(body)
+  })
 
   def createBucket(user: User, bucket: Bucket) = broadcastToAll("POST", "/workspace", (request: WSRequestHolder) => {
     val body = Json.obj(

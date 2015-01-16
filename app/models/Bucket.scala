@@ -10,6 +10,7 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
 import reactivemongo.core.commands.LastError
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.concurrent.Future
 import lib.util.Implicits._
@@ -168,6 +169,27 @@ case class Bucket(
 
 object Bucket {
   implicit val handler = Macros.handler[Bucket]
+
+
+
+  val jsonTemplate: JsValue = Json.parse("""
+{
+  "name" : "Watership Down",
+  "location" : {
+    "lat" : 51.235685,
+    "long" : -1.309197
+  },
+  "residents" : [ {
+    "name" : "Fiver",
+    "age" : 4,
+    "role" : null
+  }, {
+    "name" : "Bigwig",
+    "age" : 6,
+    "role" : "Owsla"
+  } ]
+}
+""")
 
   implicit val BucketWrites = new Writes[Bucket] {
     override def writes(o: Bucket) = Json.obj(

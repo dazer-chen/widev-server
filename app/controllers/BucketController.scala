@@ -41,12 +41,54 @@ class BucketController(buckets: Buckets, teams: Teams) extends Controller with A
     }
   }
 
+  def getBucketFromWeb(id: String) = AsyncStack(AuthorityKey -> Standard) {
+    implicit request =>
+
+      import lib.util.Implicits._
+
+      canReadAndEditBucket(id) {
+        bucket => Future(Ok(Json.obj(
+          "_id" -> bucket._id.stringify,
+          "name" -> bucket.name,
+          "owner" -> bucket.owner.stringify,
+          "teams" -> bucket.teams.map(_.stringify),
+          "files" -> bucket.files.map(_.path),
+          "createdAt" -> bucket.creation,
+          "updatedAt" -> bucket.update,
+          "version" -> bucket.version
+        )))
+      }
+  }
+
   def getBucket(id: String) = AsyncStack(AuthorityKey -> Standard) {
     implicit request =>
       canReadAndEditBucket(id) {
         bucket =>
           Future(Ok(Json.toJson(bucket)))
       }
+  }
+
+  def getBucketsFromWeb = AsyncStack(AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+
+      import lib.util.Implicits._
+
+      buckets.findByUser(user._id).map(
+        bs =>
+          Ok(Json.toJson(bs.map {
+            bucket => Json.obj(
+            "_id" -> bucket._id.stringify,
+            "name" -> bucket.name,
+            "owner" -> bucket.owner.stringify,
+            "teams" -> bucket.teams.map(_.stringify),
+            "files" -> bucket.files.map(_.path),
+            "createdAt" -> bucket.creation,
+            "updatedAt" -> bucket.update,
+            "version" -> bucket.version
+            )
+          }))
+      )
   }
 
   def getBuckets = AsyncStack(AuthorityKey -> Standard) {
@@ -136,6 +178,149 @@ class BucketController(buckets: Buckets, teams: Teams) extends Controller with A
           )
         }
         case None => Future(NotFound(s"Bucket $id not found"))
+      }
+  }
+
+  def createBucketFromWeb = AsyncStack(BodyParsers.parse.json, AuthorityKey -> Standard) {
+    implicit request =>
+      val user = loggedIn
+
+      import models.Bucket._
+
+      val name = (request.body \ "name").as[String]
+
+      val templateBucket = Bucket(
+        name = name,
+        owner = user._id,
+        version = 2,
+        files = Array(File(
+          encoding = "UTF8",
+          id = 1,
+          path = "CMakeLists.txt"
+        ),File(
+          encoding = "UTF8",
+          id = 2,
+          path = "main.cpp"
+        )),
+        navigator = Array(NavigatorElement(
+          children = Array(1, 2),
+          id = 3,
+          kind = 0,
+          name = "root",
+          path = ""
+        )),
+        project = Project(
+          cmakelistsCache =  "build",
+          cmakelistsPath = "CMakeLists.txt",
+          makefilePath =  "build/Makefile"
+        ),
+        targets = Array(
+          Target(
+          arguments = Array("-j", "2", "help"),
+          dependencies = Array(),
+          environment = "Help",
+          execPath = "make",
+          isHidden = true,
+          isProduct = false,
+          name = "Help",
+          workingDirectory = "build"
+          ),
+          Target(
+            arguments = Array("-j", "2", "all"),
+            dependencies = Array(),
+            environment = "All_Build",
+            execPath = "make",
+            isHidden = false,
+            isProduct = false,
+            name = "All_Build",
+            workingDirectory = "build"
+          ),
+          Target(
+            arguments = Array("-j", "2", "clean"),
+            dependencies = Array(),
+            environment = "Clean",
+            execPath = "make",
+            isHidden = true,
+            isProduct = false,
+            name = "Clean",
+            workingDirectory = "build"
+          ),
+          Target(
+            arguments = Array("-j", "2", "a.out"),
+            dependencies = Array(),
+            environment = "a.out",
+            execPath = "make",
+            isHidden = false,
+            isProduct = false,
+            name = "a.out",
+            workingDirectory = "build"
+          ),
+          Target(
+            arguments = Array(),
+            dependencies = Array("a.out"),
+            environment = "Exec",
+            execPath = "build/a.out",
+            isHidden = false,
+            isProduct = true,
+            name = "Exec",
+            workingDirectory = ""
+          )
+        )
+      )
+
+      buckets.collection.insert(templateBucket).flatMap {
+        _ => {
+
+          Future.sequence(Seq(
+            FileManager.insert(
+              bucket = templateBucket,
+              filePath = templateBucket.files(1).path,
+              position = 0,
+              """
+                |#include <iostream>
+                |
+                |int main(int argc, const char *argv[]) {
+                |    // insert code here...
+                |    std::cout << "Hello, World!\n";
+                |    return 0;
+                |}
+              """.stripMargin.getBytes
+            ),
+            FileManager.insert(
+              bucket = templateBucket,
+              filePath = templateBucket.files(0).path,
+              position = 0,
+              """
+                |cmake_minimum_required(VERSION 2.8)
+                |
+                |Project( CPP )
+                |
+                |# only way to add headers in generated solution
+                |file(GLOB headers "*.h")
+                |file(GLOB sources "*.cpp")
+                |
+                |INCLUDE_DIRECTORIES (
+                |    ./
+                |)
+                |
+                |add_definitions(-g)
+                |
+                |ADD_EXECUTABLE( a.out
+                |    ${sources}
+                |    ${headers}
+                |)
+              """.stripMargin.getBytes
+            ),
+            PluginManager.createBucket(user, templateBucket)
+          )).map {
+            _ =>
+              Ok(Json.toJson(templateBucket))
+          }
+        }
+      }.recover {
+        case e: Throwable =>
+          Logger.error("Couldn't create bucket", e)
+          NotAcceptable(s"Bucket already exists.")
       }
   }
 

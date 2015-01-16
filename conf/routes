@@ -29,16 +29,20 @@ POST          /users                                controllers.UserController.c
 # Bucket
 GET           /buckets/ws                           controllers.BucketController.socket
 GET           /buckets/:id                          controllers.BucketController.getBucket(id: String)
+GET           /bucketsweb/:id                       controllers.BucketController.getBucketFromWeb(id: String)
 GET           /buckets/:id/files                    controllers.BucketController.listFiles(id: String)
 GET           /buckets/:id/file                     controllers.BucketController.getFile(id: String)
 PUT           /buckets/:id                          controllers.BucketController.updateBucket(id: String)
 POST          /buckets                              controllers.BucketController.createBucket
+POST          /buckets/web                          controllers.BucketController.createBucketFromWeb
 GET           /buckets                              controllers.BucketController.getBuckets
+GET           /bucketsweb                           controllers.BucketController.getBucketsFromWeb
 POST          /buckets/:id/file                     controllers.BucketController.uploadFile(id: String)
 DELETE        /buckets/:id/files                    controllers.BucketController.removeFile(id: String)
 PUT           /buckets/:id/teams                    controllers.BucketController.updateTeams(id: String)
 PUT           /buckets/:id/teams/add                controllers.BucketController.addTeam(id: String)
 PUT           /buckets/:id/teams/remove             controllers.BucketController.removeTeam(id: String)
+
 
 #Teams
 GET           /teams/:id                            controllers.TeamController.getTeam(id: String)
